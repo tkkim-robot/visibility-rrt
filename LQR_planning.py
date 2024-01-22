@@ -12,20 +12,20 @@ import env
 Created on Jan 22, 2024
 @author: Taekyung Kim
 
-@description: This code implements a collision avoidance CBF with an unicycle model using velocity control.
-This code also provides a path generation function with the CBF constraint.
-The main function shows some examples.
+@description: This code implements a discrete-time finite horizon LQR with unicycle model using velocity control. 
+This code also provides a path planning function with the computed LQR gain, both using QP and not using QP.
+They are similar to "motion_plannig_with/without_QP()" in cbf.py, but they use LQR gains instead.
+The main function shows tracking a randomly generated goal points with LQR planning. (can turn on/off QP)
 
-@note: This code is a rewritten version of the CBF-RRT paper with
-non-linear dynamics. The code baseline is from Guang Yang.
+@note: This code is a refactorized version of the LQR-CBF-RRT* paper with non-linear dynamics.
+The code baseline is from Guang Yang.
+Please see this origina code for detail : https://github.com/mingyucai/LQR_CBF_rrtStar/blob/main/nonlinear_dynamic_model/LQR_nonlinear_planning.py
 Currently. only supports unicycle model with velocity control.
 
 @required-scripts: cbf.py, env.py
 
 @being-used-in: LQR_CBF_rrtStar.py
 """
-
-SHOW_ANIMATION = True
 
 class LQRPlanner:
 
@@ -88,15 +88,17 @@ class LQRPlanner:
 
             x = xk - xd
             u = self.K[i] @ x
-            print("x ", x)
-            print("u ", u)
-            print("K ", self.K[i])
+            # print("x ", x)
+            # print("u ", u)
+            # print("K ", self.K[i])
             i += 1
             
             if solve_QP:
-                # solve QP with CBF, update control input u
+                #solve QP with CBF, update control input u
                 try:
+                    u = np.array(u).squeeze() # convert matrix to array
                     u = self.cbf_rrt_simulation.QP_controller([x[0, 0] + gx, x[1, 0] + gy, x[2, 0] + gtheta], u, model = "unicycle")
+                    u = np.matrix(u).reshape(2, -1) # convert array to matrix
                 except:
                     print('The CBF-QP at current steering step is infeasible')
                     break
@@ -213,6 +215,9 @@ if __name__ == '__main__':
     print(__file__ + " start!!")
     import random
 
+    SHOW_ANIMATION = True
+    SOLVE_QP = False
+
     ntest = 10  # number of goal
     area = 50.0  # sampling area
 
@@ -233,7 +238,7 @@ if __name__ == '__main__':
 
         print("goal", gy, gx)
 
-        rx, ry, error, foundpath = lqr_planner.lqr_planning(sx, sy, gx, gy, LQR_gain=LQR_gain, solve_QP = False, show_animation=SHOW_ANIMATION)
+        rx, ry, error, foundpath = lqr_planner.lqr_planning(sx, sy, gx, gy, LQR_gain=LQR_gain, solve_QP = SOLVE_QP, show_animation=SHOW_ANIMATION)
 
         print("time of running LQR: ", time.time() - start_time)
 
