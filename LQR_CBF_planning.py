@@ -162,10 +162,10 @@ class LQR_CBF_Planner:
 
         if not found_path:
             print("Cannot found !!")
-            return rx, ry, ryaw, error, found_path
+            return [rx, ry, ryaw], error, found_path
 
         print("Fonud path to goal")
-        return rx, ry, ryaw, error, found_path
+        return [rx, ry, ryaw], error, found_path
 
 
     def finite_dLQR(self, A, B, Q, R):
