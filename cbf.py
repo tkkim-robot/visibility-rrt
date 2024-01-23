@@ -17,6 +17,8 @@ The main function shows some examples.
 @note: This code is a rewritten version of the CBF-RRT paper with
 non-linear dynamics. The code baseline is from Guang Yang.
 Currently. only supports unicycle model with velocity control.
+
+@being-used-in: LQR_planning.py
 """
 
 

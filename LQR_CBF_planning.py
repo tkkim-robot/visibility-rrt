@@ -27,7 +27,7 @@ Currently. only supports unicycle model with velocity control.
 @being-used-in: LQR_CBF_rrtStar.py
 """
 
-class LQRPlanner:
+class LQR_CBF_Planner:
 
     def __init__(self):
 
@@ -50,7 +50,7 @@ class LQRPlanner:
         # self.obs_boundary = self.env.obs_boundary
         self.cbf_rrt_simulation = CBF(self.obs_circle)
 
-    def lqr_planning(self, sx, sy, gx, gy, LQR_gain, solve_QP = False, show_animation = True):
+    def lqr_cbf_planning(self, sx, sy, gx, gy, LQR_gain, solve_QP = False, show_animation = True):
 
         # FIXME: add yaw angle into the planning algorithm (currently just compute it using arctan2)
         gtheta = np.arctan2(gy-sy, gx-sx)
@@ -134,9 +134,10 @@ class LQRPlanner:
                 plt.pause(0.5)
 
         if not found_path:
-            print("Cannot found LQR generated path to goal")
+            print("Cannot found !!")
             return rx, ry, error, found_path
 
+        print("Fonud path to goal")
         return rx, ry, error, found_path
 
 
@@ -221,7 +222,7 @@ if __name__ == '__main__':
     ntest = 10  # number of goal
     area = 50.0  # sampling area
 
-    lqr_planner = LQRPlanner()
+    lqr_cbf_planner = LQR_CBF_Planner()
 
     # initialize a has table for storing LQR gain
     # TODO: this should be modified to be optional 
@@ -238,7 +239,7 @@ if __name__ == '__main__':
 
         print("goal", gy, gx)
 
-        rx, ry, error, foundpath = lqr_planner.lqr_planning(sx, sy, gx, gy, LQR_gain=LQR_gain, solve_QP = SOLVE_QP, show_animation=SHOW_ANIMATION)
+        rx, ry, error, foundpath = lqr_cbf_planner.lqr_cbf_planning(sx, sy, gx, gy, LQR_gain=LQR_gain, solve_QP = SOLVE_QP, show_animation=SHOW_ANIMATION)
 
         print("time of running LQR: ", time.time() - start_time)
 
