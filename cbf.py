@@ -69,7 +69,7 @@ class CBF:
                 LfLfh = 2*(v**2)*math.cos(theta)**2 + 2*(v**2)*math.sin(theta)**2
                 LgLfh = 2*v*math.cos(theta)*(y-yo) - 2*v*math.sin(theta)*(x-xo)
 
-                self.m.addConstr(LfLfh + LgLfh*self.w + self.k2_unicyle_cbf*Lfh + self.k1_unicyle_cbf*h >= 0,"CBF_constraint")
+                self.m.addConstr(LfLfh + LgLfh*self.w + self.k2_unicyle_cbf*Lfh + self.k1_unicyle_cbf*h >= 0, "CBF_constraint")
 
             #Stop optimizer from publsihing results to console - remove if desired
             self.m.Params.LogToConsole = 0
@@ -171,11 +171,10 @@ class CBF:
                     def unicycle_model_velocity_control(t, y):
                         return [math.cos(y[2]) * self.unicycle_constant_v, math.sin(y[2]) * self.unicycle_constant_v, u_ref[i]]
 
-                    solution = solve_ivp(fun=unicycle_model_velocity_control, t_span=[0, self.DT], y0=x_current.ravel(), dense_output=True)
-                    x_current = solution.y[:, -1] # to be appended horizontally
-                    u_current = u_current# to be appended horizontally
+                    solution = solve_ivp(fun=unicycle_model_velocity_control, t_span=[0, self.DT], y0=x_current, dense_output=True)
+                    x_current = solution.y[:, -1] # y[:, -1] to obtain the state after integration, which is at time = self.DT
                     self.x = np.vstack((self.x, x_current))
-                    self.u = np.vstack((self.u, u_current))
+                    self.u = np.vstack((self.u, u_current)) # vertically stack u
 
             return self.x, self.u
         
