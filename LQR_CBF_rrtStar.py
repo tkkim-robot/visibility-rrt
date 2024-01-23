@@ -64,17 +64,7 @@ class LQRrrtStar:
             node_nearest = self.nearest_neighbor(self.vertex, node_rand)
             node_new = self.LQR_steer(node_nearest, node_rand)
 
-            # when node_new is feasible and safe
-            if node_new and not self.is_collision(node_nearest, node_new):
-                # add node_new to the tree
-                self.vertex.append(node_new)
-
-                # rewiring
-                neighbor_index = self.find_near_neighbor(node_new)
-                if neighbor_index:
-                    self.LQR_choose_parent(node_new, neighbor_index)
-                    self.rewire(node_new, neighbor_index)
-        
+            # visualization
             if k % 100 == 0:
                 print('rrtStar sampling iterations: ', k)
                 print('rrtStar 1000 iterations sampling time: ', time.time() - start_time)
@@ -83,6 +73,18 @@ class LQRrrtStar:
             if k % 1000 == 0:
                 print('rrtStar sampling iterations: ', k)
                 self.plotting.animation_online(self.vertex, "rrtStar", True)
+
+            # when node_new is feasible and safe
+            if node_new and not self.is_collision(node_nearest, node_new):
+                # the order of this function should not be changed, otherwise, neighbor might include itself
+                neighbor_index = self.find_near_neighbor(node_new) 
+                # add node_new to the tree
+                self.vertex.append(node_new)
+
+                # rewiring
+                if neighbor_index:
+                    self.LQR_choose_parent(node_new, neighbor_index)
+                    self.rewire(node_new, neighbor_index)
 
         index = self.search_goal_parent()
 
@@ -129,7 +131,7 @@ class LQRrrtStar:
             return None
         px, py, traj_cost = self.sample_path(rx, ry)
 
-        node_new = Node((rx[-1], ry[-1], 0.0))
+        node_new = Node((rx[-1], ry[-1], ryaw[-1]))
         node_new.parent = node_start
 
         # calculate cost in terms of trajectory length
@@ -174,6 +176,9 @@ class LQRrrtStar:
         return node_start.cost + sum(abs(c) for c in traj_cost), can_reach
 
     def LQR_choose_parent(self, node_new, neighbor_index):
+        """
+            - before rewiring, choose the best parent for node_new
+        """
         cost = []
         for i in neighbor_index:
 
