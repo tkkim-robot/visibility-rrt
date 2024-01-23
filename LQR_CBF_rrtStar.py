@@ -3,29 +3,35 @@ import time
 import copy
 import numpy as np
 
-import env, plotting, utils
+from utils import env, plotting, utils
+from utils.node import Node
 from LQR_CBF_planning import LQR_CBF_Planner
 
-class Node:
-    def __init__(self, n):
-        self.x = n[0]
-        self.y = n[1]
-        self.parent = None
-        self.cost = 0
-        self.StateTraj = None
-        self.childrenNodeInds = set([])
+
+"""
+Created on Jan 23, 2024
+# FIXME: write desciprtion
+@author: Taekyung Kim
+
+@description:
+
+@note: 
+
+@required-scripts: LQR_CBF_planning.py, env.py
+
+"""
 
 class LQRrrtStar:
     def __init__(self, x_start, x_goal, step_len,
                  goal_sample_rate, search_radius, iter_max, solve_QP=False):
-        self.s_start = Node(x_start)
-        self.s_goal = Node(x_goal)
+        self.x_start = Node(x_start)
+        self.x_goal = Node(x_goal)
         self.step_len = step_len
         self.goal_len = 8
         self.goal_sample_rate = goal_sample_rate
         self.search_radius = search_radius
         self.iter_max = iter_max
-        self.vertex = [self.s_start]
+        self.vertex = [self.x_start]
         self.path = []
 
         self.env = env.Env()
@@ -100,7 +106,7 @@ class LQRrrtStar:
         node_goal.y = node_start.y + dist * math.sin(theta)
 
 
-        wx, wy, _, _, = self.lqr_cbf_planner.lqr_cbf_planning(node_start.x, node_start.y, node_goal.x, node_goal.y, self.LQR_Gain, solve_QP=self.solve_QP, show_animation=show_animation)
+        wx, wy, _, _, = self.lqr_cbf_planner.lqr_cbf_planning(node_start, node_goal, self.LQR_Gain, solve_QP=self.solve_QP, show_animation=show_animation)
         px, py, traj_cost = self.sample_path(wx, wy)
 
 
@@ -111,11 +117,11 @@ class LQRrrtStar:
         node_new.parent = node_start
         # calculate cost of each new_node
         node_new.cost = node_start.cost + sum(abs(c) for c in traj_cost)
-        node_new.StateTraj = np.array([px,py]) # Will be needed for adaptive sampling 
+        #node_new.StateTraj = np.array([px,py]) # Will be needed for adaptive sampling 
         return node_new
 
     def cal_LQR_new_cost(self, node_start, node_goal):
-        wx, wy, _, can_reach = self.lqr_cbf_planner.lqr_cbf_planning(node_start.x, node_start.y, node_goal.x, node_goal.y, self.LQR_Gain, show_animation=False, solve_QP=self.solve_QP)
+        wx, wy, _, can_reach = self.lqr_cbf_planner.lqr_cbf_planning(node_start, node_goal, self.LQR_Gain, show_animation=False, solve_QP=self.solve_QP)
         px, py, traj_cost = self.sample_path(wx, wy)
         if wx is None:
             return float('inf'), False
@@ -128,7 +134,7 @@ class LQRrrtStar:
         for i in neighbor_index:
 
             # check if neighbor_node can reach node_new
-            _, _, _, can_reach = self.lqr_cbf_planner.lqr_cbf_planning(self.vertex[i].x, self.vertex[i].y, node_new.x, node_new.y, self.LQR_Gain, show_animation=False, solve_QP=self.solve_QP)
+            _, _, _, can_reach = self.lqr_cbf_planner.lqr_cbf_planning(self.vertex[i], node_new, self.LQR_Gain, show_animation=False, solve_QP=self.solve_QP)
 
             if can_reach and not self.utils.is_collision(self.vertex[i], node_new):  #collision check should be updated if using CBF
                 update_cost, _ = self.cal_LQR_new_cost(self.vertex[i], node_new)
@@ -166,7 +172,7 @@ class LQRrrtStar:
             
 
     def search_goal_parent(self):
-        dist_list = [math.hypot(n.x - self.s_goal.x, n.y - self.s_goal.y) for n in self.vertex]
+        dist_list = [math.hypot(n.x - self.x_goal.x, n.y - self.x_goal.y) for n in self.vertex]
         node_index = [i for i in range(len(dist_list)) if dist_list[i] <= self.goal_len]
 
         if not node_index:
@@ -174,7 +180,7 @@ class LQRrrtStar:
 
         if len(node_index) > 0:
             cost_list = [dist_list[i] + self.vertex[i].cost for i in node_index
-                         if not self.utils.is_collision(self.vertex[i], self.s_goal)]
+                         if not self.utils.is_collision(self.vertex[i], self.x_goal)]
             return node_index[int(np.argmin(cost_list))]
 
         return len(self.vertex) - 1
@@ -187,7 +193,7 @@ class LQRrrtStar:
             return Node((np.random.uniform(self.x_range[0] + delta, self.x_range[1] - delta),
                         np.random.uniform(self.y_range[0] + delta, self.y_range[1] - delta)))
 
-        return copy.deepcopy(self.s_goal)
+        return copy.deepcopy(self.x_goal)
         
     def find_near_neighbor(self, node_new):
         n = len(self.vertex) + 1
@@ -205,7 +211,7 @@ class LQRrrtStar:
 
 
     def extract_path(self, node_end):
-        path = [[self.s_goal.x, self.s_goal.y]]
+        path = [[self.x_goal.x, self.x_goal.y]]
         node = node_end
 
         while node.parent is not None:
@@ -231,7 +237,7 @@ if __name__ == '__main__':
     x_goal = (30.0, 24.0)  # Goal node
     x_goal = (18.0, 10.0)  # Goal node
 
-    rrt_star = LQRrrtStar(x_start=x_start, x_goal=x_goal, step_len=10,
+    lqr_rrt_star = LQRrrtStar(x_start=x_start, x_goal=x_goal, step_len=10,
                             goal_sample_rate=0.10, search_radius=20, 
                             iter_max=2000, solve_QP=False)
-    rrt_star.planning()
+    lqr_rrt_star.planning()
