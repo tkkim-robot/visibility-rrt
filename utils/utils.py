@@ -1,13 +1,9 @@
 import math
 import numpy as np
 
-import env
+import utils.env as env
+from utils.node import Node
 
-class Node:
-    def __init__(self, n):
-        self.x = n[0]
-        self.y = n[1]
-        self.parent = None
 
 class Utils:
     def __init__(self):

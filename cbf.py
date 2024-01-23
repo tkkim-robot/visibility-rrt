@@ -18,7 +18,7 @@ The main function shows some examples.
 non-linear dynamics. The code baseline is from Guang Yang.
 Currently. only supports unicycle model with velocity control.
 
-@being-used-in: LQR_planning.py
+@being-used-in: LQR_CBF_planning.py
 """
 
 

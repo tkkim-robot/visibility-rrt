@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import os
 import sys
-import env
+import utils.env as env
 
 class Plotting:
     def __init__(self, x_start, x_goal):

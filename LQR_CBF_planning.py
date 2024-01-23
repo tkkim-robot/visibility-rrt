@@ -6,7 +6,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from cbf import CBF
-import env
+import utils.env as env
+from utils.node import Node
 
 """
 Created on Jan 22, 2024
@@ -50,9 +51,14 @@ class LQR_CBF_Planner:
         # self.obs_boundary = self.env.obs_boundary
         self.cbf_rrt_simulation = CBF(self.obs_circle)
 
-    def lqr_cbf_planning(self, sx, sy, gx, gy, LQR_gain, solve_QP = False, show_animation = True):
+    def lqr_cbf_planning(self, start_node, goal_node, LQR_gain, solve_QP = False, show_animation = True):
 
         # FIXME: add yaw angle into the planning algorithm (currently just compute it using arctan2)
+        sx = start_node.x
+        sy = start_node.y
+        gx = goal_node.x
+        gy = goal_node.y
+        #gtheta = np.arctan2(gy-sy, gx-sx)
         gtheta = np.arctan2(gy-sy, gx-sx)
 
         # Linearize system model
@@ -237,9 +243,12 @@ if __name__ == '__main__':
         sx = 0.0
         sy = 0.0
 
+        start_node = Node([sx, sy])
+        goal_node = Node([gx, gy])
+
         print("goal", gy, gx)
 
-        rx, ry, error, foundpath = lqr_cbf_planner.lqr_cbf_planning(sx, sy, gx, gy, LQR_gain=LQR_gain, solve_QP = SOLVE_QP, show_animation=SHOW_ANIMATION)
+        rx, ry, error, foundpath = lqr_cbf_planner.lqr_cbf_planning(start_node, goal_node, LQR_gain=LQR_gain, solve_QP = SOLVE_QP, show_animation=SHOW_ANIMATION)
 
         print("time of running LQR: ", time.time() - start_time)
 
