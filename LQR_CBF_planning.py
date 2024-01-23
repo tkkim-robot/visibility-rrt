@@ -88,7 +88,7 @@ class LQR_CBF_Planner:
             LQR_gain[waypoint] = self.K
 
         # initialize robot trajectroy, start from current state
-        rx, ry = [sx], [sy]
+        rx, ry, ryaw = [sx], [sy], [stheta]
         error = []
 
         xk = np.array([sx, sy, stheta]).reshape(3, 1)  # State vector
@@ -132,6 +132,7 @@ class LQR_CBF_Planner:
 
             rx.append(xk[0, 0])
             ry.append(xk[1, 0])
+            ryaw.append(xk[2, 0])
             # print(x)
             # print(self.K[i])
             # print(u)
@@ -161,10 +162,10 @@ class LQR_CBF_Planner:
 
         if not found_path:
             print("Cannot found !!")
-            return rx, ry, error, found_path
+            return rx, ry, ryaw, error, found_path
 
         print("Fonud path to goal")
-        return rx, ry, error, found_path
+        return rx, ry, ryaw, error, found_path
 
 
     def finite_dLQR(self, A, B, Q, R):
