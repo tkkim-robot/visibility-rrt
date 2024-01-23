@@ -14,6 +14,18 @@ Created on Jan 23, 2024
 
 """
 
+def angular_diff(a, b):
+    """Angle difference from b to a (a - b)"""
+    d = a - b
+    if d > math.pi:
+        d -= 2 * math.pi
+    elif d < -math.pi:
+        d += 2 * math.pi
+    return d
+
+def angle_normalize(x):
+    return (((x + math.pi) % (2 * math.pi)) - math.pi)
+
 class Utils:
     def __init__(self):
         self.env = env.Env()

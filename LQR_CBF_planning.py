@@ -8,6 +8,7 @@ import numpy as np
 from cbf import CBF
 import utils.env as env
 from utils.node import Node
+from utils.utils import angular_diff, angle_normalize
 
 """
 Created on Jan 22, 2024
@@ -50,16 +51,27 @@ class LQR_CBF_Planner:
         # self.obs_rectangle = self.env.obs_rectangle
         # self.obs_boundary = self.env.obs_boundary
         self.cbf_rrt_simulation = CBF(self.obs_circle)
-
+    
     def lqr_cbf_planning(self, start_node, goal_node, LQR_gain, solve_QP = False, show_animation = True):
 
-        # FIXME: add yaw angle into the planning algorithm (currently just compute it using arctan2)
         sx = start_node.x
         sy = start_node.y
+        if start_node.yaw is None:
+            raise RuntimeError("start node' yaw is not specified")
+        else:
+            stheta = start_node.yaw
+        stheta = angle_normalize(stheta)
+
         gx = goal_node.x
         gy = goal_node.y
-        #gtheta = np.arctan2(gy-sy, gx-sx)
-        gtheta = np.arctan2(gy-sy, gx-sx)
+        if goal_node.yaw is None:
+            gtheta = math.atan2(gy-sy, gx-sx)
+        else:
+            gtheta = goal_node.yaw
+        gtheta = angle_normalize(gtheta)
+
+        # TODO: this does not necessary when only using QPConstraint
+        self.cbf_rrt_simulation.set_initial_state(np.array([sx, sy, stheta]))
 
         # Linearize system model
         xd = np.matrix([[gx], [gy], [gtheta]])
@@ -75,10 +87,6 @@ class LQR_CBF_Planner:
             self.K = self.finite_dLQR(self.A, self.B, self.Q, self.R)
             LQR_gain[waypoint] = self.K
 
-        # TODO: this does not necessary when only using QPConstraint
-        stheta = 0  # start angle
-        self.cbf_rrt_simulation.set_initial_state(np.array([sx, sy, stheta]))
-
         # initialize robot trajectroy, start from current state
         rx, ry = [sx], [sy]
         error = []
@@ -93,6 +101,8 @@ class LQR_CBF_Planner:
             time += self.DT
 
             x = xk - xd
+            x[2, 0] = angular_diff(xk[2, 0], xd[2, 0])
+            #x = xd - xk
             u = self.K[i] @ x
             # print("x ", x)
             # print("u ", u)
@@ -114,10 +124,20 @@ class LQR_CBF_Planner:
                     break
 
             # update current state
+            # FIXME: now, yaw angle in self.C is not zero, so it results in accumulated yaw angle error
+            # should check self.C again whether it is correct, or removing self.C
             xk = self.A @ xk + self.B @ u + self.C
+            theta_k = angle_normalize(xk[2,0])
+            xk[2,0] = theta_k
 
             rx.append(xk[0, 0])
             ry.append(xk[1, 0])
+            # print(x)
+            # print(self.K[i])
+            # print(u)
+            # print(self.B)
+            # print(self.C)
+            # print()
 
             d = math.sqrt((gx - rx[-1]) ** 2 + (gy - ry[-1]) ** 2)
             error.append(d)
@@ -242,8 +262,9 @@ if __name__ == '__main__':
 
         sx = 0.0
         sy = 0.0
+        stheta = math.atan2(gy-sy, gx-sx)
 
-        start_node = Node([sx, sy])
+        start_node = Node([sx, sy, stheta])
         goal_node = Node([gx, gy])
 
         print("goal", gy, gx)
