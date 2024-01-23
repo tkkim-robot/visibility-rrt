@@ -4,6 +4,15 @@ import numpy as np
 import utils.env as env
 from utils.node import Node
 
+"""
+Created on Jan 23, 2024
+@author: Taekyung Kim
+
+@description: majority of this code if for collision checking with obstacles (rect, circle, boundary)
+
+@required-scripts: env.py, node.py
+
+"""
 
 class Utils:
     def __init__(self):
