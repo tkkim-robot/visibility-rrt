@@ -270,7 +270,8 @@ if __name__ == '__main__':
 
         print("goal", gy, gx)
 
-        rx, ry, error, foundpath = lqr_cbf_planner.lqr_cbf_planning(start_node, goal_node, LQR_gain=LQR_gain, solve_QP = SOLVE_QP, show_animation=SHOW_ANIMATION)
+        rtraj, error, foundpath = lqr_cbf_planner.lqr_cbf_planning(start_node, goal_node, LQR_gain=LQR_gain, solve_QP = SOLVE_QP, show_animation=SHOW_ANIMATION)
+        rx, ry, ryaw = rtraj
 
         print("time of running LQR: ", time.time() - start_time)
 
