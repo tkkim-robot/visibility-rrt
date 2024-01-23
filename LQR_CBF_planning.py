@@ -164,7 +164,7 @@ class LQR_CBF_Planner:
             print("Cannot found !!")
             return [rx, ry, ryaw], error, found_path
 
-        print("Fonud path to goal")
+        #print("Fonud path to goal")
         return [rx, ry, ryaw], error, found_path
 
 
