@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from cbf import CBF
+from visibility_cbf import Visibility_CBF
 import utils.env as env
 from utils.node import Node
 from utils.utils import angular_diff, angle_normalize
@@ -50,7 +51,8 @@ class LQR_CBF_Planner:
         # TODO: currently not supporting rectangle and boundary obstacle
         # self.obs_rectangle = self.env.obs_rectangle
         # self.obs_boundary = self.env.obs_boundary
-        self.cbf_rrt_simulation = CBF(self.obs_circle)
+        self.collision_cbf = CBF(self.obs_circle)
+        self.visibility_cbf = Visibility_CBF()
     
     def lqr_cbf_planning(self, start_node, goal_node, LQR_gain, solve_QP = False, show_animation = True):
 
@@ -71,7 +73,17 @@ class LQR_CBF_Planner:
         gtheta = angle_normalize(gtheta)
 
         # TODO: this does not necessary when only using QPConstraint
-        self.cbf_rrt_simulation.set_initial_state(np.array([sx, sy, stheta]))
+        self.collision_cbf.set_initial_state(np.array([sx, sy, stheta]))
+        self.visibility_cbf.set_initial_state(np.array([sx, sy, stheta]))
+
+        # FIXME: critical point should be more general
+        # FIXME: first, let's try to just give the new_node, and modify the distance a little bit shorter (for t_reach to be make sense), treat it as xc
+        MAX_DIST_CRITICAL = 5.0 # [m]
+        dist_to_critical = math.hypot(gx-sx, gy-sy)
+        dist_to_critical = min(dist_to_critical, MAX_DIST_CRITICAL)
+        cx = sx + dist_to_critical * math.cos(gtheta)
+        cy = sy + dist_to_critical * math.sin(gtheta)
+        self.visibility_cbf.set_critical_point(np.array([cx, cy]))
 
         # Linearize system model
         xd = np.matrix([[gx], [gy], [gtheta]])
@@ -113,14 +125,18 @@ class LQR_CBF_Planner:
                 #solve QP with CBF, update control input u
                 try:
                     u = np.array(u).squeeze() # convert matrix to array
-                    u = self.cbf_rrt_simulation.QP_controller([x[0, 0] + gx, x[1, 0] + gy, x[2, 0] + gtheta], u, model = "unicycle")
+                    u = self.collision_cbf.QP_controller([x[0, 0] + gx, x[1, 0] + gy, x[2, 0] + gtheta], u, model = "unicycle")
                     u = np.matrix(u).reshape(2, -1) # convert array to matrix
                 except:
                     print('The CBF-QP at current steering step is infeasible')
                     break
             else:
                 # check if LQR control input is safe with respect to CBF constraint, not solving QP
-                if not self.cbf_rrt_simulation.QP_constraint([x[0, 0] + gx, x[1, 0] + gy, x[2, 0] + gtheta], u, model = "unicycle_velocity_control"):
+                collision_cbf_constraint = self.collision_cbf.QP_constraint([x[0, 0] + gx, x[1, 0] + gy, x[2, 0] + gtheta], u, model = "unicycle_velocity_control")
+                visibility_cbf_constraint = self.visibility_cbf.QP_constraint([x[0, 0] + gx, x[1, 0] + gy, x[2, 0] + gtheta], u, model = "unicycle_velocity_control")
+                #visibility_cbf_constraint = True # FIXME: temporary
+                if not collision_cbf_constraint or not visibility_cbf_constraint:
+                    # violate either of constraint
                     break
 
             # update current state

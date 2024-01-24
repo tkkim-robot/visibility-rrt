@@ -79,15 +79,13 @@ class Visibility_CBF:
             dist = math.hypot(x-xc, y-yc)
             tt_reach = dist/v # time to reach the critical point
 
-            # FIXME: first, let's try to just give the new_node, and modify the distance a little bit shorter (for t_reach to be make sense), treat it as xc
-
             # Unicycle with velocity control
             h = tt_reach - tt_rot
-            # print("theta, thetac ", theta, thetac)
-            # print("dtheta ", math.acos(z), dtheta)
-            # print("tt_reach", tt_reach)
-            # print("tt_rot", tt_rot)
-            # print("z", z)
+            print("theta, thetac ", theta, thetac)
+            print("dtheta ", math.acos(z), dtheta)
+            print("tt_reach", tt_reach)
+            print("tt_rot", tt_rot)
+            print("z", z)
             Lfh = (x-xc)/dist*math.cos(theta) + (y-yc)/dist*math.sin(theta)
             Lgh = -1/abs(self.w_upper_lim) * (1/math.sqrt(1 - z**2)) * (math.sin(theta)*math.cos(thetac) - math.cos(theta)*math.sin(thetac))
     
@@ -138,6 +136,7 @@ class Visibility_CBF:
 if __name__ == "__main__":
     CBF_Planning = Visibility_CBF()
 
+    # FIXME: should implement QP
     with_QP = False
     without_QP = True
 
