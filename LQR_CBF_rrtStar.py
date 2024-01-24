@@ -257,11 +257,12 @@ if __name__ == '__main__':
     x_start = (2.0, 2.0, 0.0)  # Starting node (x, y, yaw)
     #x_goal = (30.0, 24.0)  # Goal node
     x_goal = (18.0, 10.0)  # Goal node
+    x_goal = (10.0, 18.0)  # Goal node
 
     lqr_rrt_star = LQRrrtStar(x_start=x_start, x_goal=x_goal, max_sampled_node_dist=10,
                               max_rewiring_node_dist=10,
                               goal_sample_rate=0.10,
                               rewiring_radius=20, 
-                              iter_max=500,
+                              iter_max=1000,
                               solve_QP=False)
     lqr_rrt_star.planning()
