@@ -24,14 +24,14 @@ Currently. only supports unicycle model with velocity control.
 
 class CBF:
     def __init__(self, obstacle_list):
-        self.DT = 0.2  #Integration Length
+        self.DT = 0.1  #Integration Length
         self.N = 50 # Number of Control Updates
         #self.k = 6 # k nearest neighbor obstacles that will be used for generating CBF constraint
-        self.cbf_constraints_sensing_radius = 20
+        self.cbf_constraints_sensing_radius = 5
 
         # TODO: should be tuned and add explanation
-        self.k1_unicyle_cbf = 2 # CBF coefficient for h(x)
-        self.k2_unicyle_cbf = 2 # CBF coefficient for Lfh(x)
+        self.k1_unicyle_cbf = 5 # CBF coefficient for h(x)
+        self.k2_unicyle_cbf = 3 # CBF coefficient for Lfh(x)
 
         self.x_obstacle = obstacle_list
         self.w_lower_lim = -5
