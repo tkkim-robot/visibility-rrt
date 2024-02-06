@@ -9,7 +9,7 @@ from cbf import CBF
 from visibility_cbf import Visibility_CBF
 import utils.env as env
 from utils.node import Node
-from utils.utils import angular_diff, angle_normalize
+from utils.utils import angular_diff, angle_normalize, calculate_fov_points
 
 """
 Created on Jan 22, 2024
@@ -310,18 +310,6 @@ class LQR_CBF_Planner:
         )
 
         return np.round(A_lin, 4), np.round(B_lin, 4), np.round(C_lin, 4)
-
-# Function to calculate the FOV triangle points
-def calculate_fov_points(position, yaw, fov_angle = math.pi/2, cam_range = 3):
-    half_fov = fov_angle/2
-    left_angle = yaw - half_fov
-    right_angle = yaw + half_fov
-
-    # Calculate points for the edges of the FOV
-    left_point = (position[0] + cam_range * math.cos(left_angle), position[1] + cam_range * math.sin(left_angle))
-    right_point = (position[0] + cam_range * math.cos(right_angle), position[1] + cam_range * math.sin(right_angle))
-
-    return left_point, right_point
 
 
 

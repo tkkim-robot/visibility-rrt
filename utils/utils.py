@@ -26,6 +26,18 @@ def angular_diff(a, b):
 def angle_normalize(x):
     return (((x + math.pi) % (2 * math.pi)) - math.pi)
 
+# Function to calculate the FOV triangle points
+def calculate_fov_points(position, yaw, fov_angle = math.pi/2, cam_range = 3):
+    half_fov = fov_angle/2
+    left_angle = yaw - half_fov
+    right_angle = yaw + half_fov
+
+    # Calculate points for the edges of the FOV
+    left_point = (position[0] + cam_range * math.cos(left_angle), position[1] + cam_range * math.sin(left_angle))
+    right_point = (position[0] + cam_range * math.cos(right_angle), position[1] + cam_range * math.sin(right_angle))
+
+    return left_point, right_point
+
 class Utils:
     def __init__(self):
         self.env = env.Env()
