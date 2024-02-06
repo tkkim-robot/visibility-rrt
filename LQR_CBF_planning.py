@@ -32,13 +32,13 @@ Currently. only supports unicycle model with velocity control.
 
 class LQR_CBF_Planner:
 
-    def __init__(self):
+    def __init__(self, visibility=True):
 
         self.N = 3  # number of state variables
         self.M = 2  # number of control variables
-        self.DT = 0.2  # discretization step
+        self.DT = 0.1  # discretization step
 
-        self.MAX_TIME = 8.0  # Maximum simulation time
+        self.MAX_TIME = 4.0  # Maximum simulation time
         self.GOAL_DIST = 0.6 # m
 
         # LQR gain is invariant
@@ -53,6 +53,8 @@ class LQR_CBF_Planner:
         # self.obs_boundary = self.env.obs_boundary
         self.collision_cbf = CBF(self.obs_circle)
         self.visibility_cbf = Visibility_CBF()
+
+        self.visibility= visibility
     
     def lqr_cbf_planning(self, start_node, goal_node, LQR_gain, solve_QP = False, show_animation = True):
 
@@ -76,15 +78,6 @@ class LQR_CBF_Planner:
         self.collision_cbf.set_initial_state(np.array([sx, sy, stheta]))
         self.visibility_cbf.set_initial_state(np.array([sx, sy, stheta]))
 
-        # FIXME: critical point should be more general
-        # FIXME: first, let's try to just give the new_node, and modify the distance a little bit shorter
-        #(for t_reach to be make sense), treat it as xc
-        MAX_DIST_CRITICAL = 5.0 # [m]
-        dist_to_critical = math.hypot(gx-sx, gy-sy)
-        dist_to_critical = min(dist_to_critical, MAX_DIST_CRITICAL)
-        cx = sx + dist_to_critical * math.cos(gtheta)
-        cy = sy + dist_to_critical * math.sin(gtheta)
-        self.visibility_cbf.set_critical_point(np.array([cx, cy]))
 
         # Linearize system model
         xd = np.matrix([[gx], [gy], [gtheta]])
@@ -110,12 +103,23 @@ class LQR_CBF_Planner:
 
         if show_animation:
             fov_lines = []
-            fov_triangle = None
+            fov_fills = []
 
         i = 0 # idx
         time = 0.0
         while time <= self.MAX_TIME:
             time += self.DT
+
+            # FIXME: critical point should be more general
+            # FIXME: first, let's try to just give the new_node, and modify the distance a little bit shorter
+            #(for t_reach to be make sense), treat it as xc
+            MAX_DIST_CRITICAL = 5.0 # [m]
+            MAX_DIST_CRITICAL = math.cos(math.pi/2 - self.visibility_cbf.fov/2) * 3 # 3 is range of the sensor
+            dist_to_critical = math.hypot(gx-rx[-1], gy-ry[-1])
+            dist_to_critical = min(dist_to_critical, MAX_DIST_CRITICAL)
+            cx = rx[-1] + dist_to_critical * math.cos(gtheta)
+            cy = ry[-1] + dist_to_critical * math.sin(gtheta)
+            self.visibility_cbf.set_critical_point(np.array([cx, cy]))
 
             x = xk - xd
             x[2, 0] = angular_diff(xk[2, 0], xd[2, 0])
@@ -126,6 +130,62 @@ class LQR_CBF_Planner:
             # print("K ", self.K[i])
             i += 1
             
+            # animation
+            if show_animation: 
+                # for stopping simulation with the 'esc' key
+                # Remove previous FOV and triangle
+                for line in fov_lines:
+                    line.remove()
+                fov_lines.clear()
+                for fill in fov_fills:
+                    fill.remove()
+                fov_fills.clear()
+
+                plt.gcf().canvas.mpl_connect('key_release_event',
+                        lambda event: [exit(0) if event.key == 'escape' else None])
+                plt.plot(sx, sy, "or")
+                plt.plot(gx, gy, "ob")
+                plt.plot(rx, ry, "-r")
+
+                robot_position = (rx[-1], ry[-1])
+                yaw = ryaw[-1]
+
+                robot_circle = plt.Circle(robot_position, 0.1, color='blue', fill=True)
+                plt.gca().add_patch(robot_circle)
+
+                # Draw the yaw line
+                yaw_line_end = (robot_position[0] + math.cos(yaw), robot_position[1] + math.sin(yaw))
+                plt.plot([robot_position[0], yaw_line_end[0]], [robot_position[1], yaw_line_end[1]], 'g-')
+
+                # Calculate and draw the FOV
+                fov_left, fov_right = calculate_fov_points(robot_position, yaw, fov_angle=self.visibility_cbf.fov, cam_range=3)
+                fov_lines.append(plt.plot([robot_position[0], fov_left[0]], [robot_position[1], fov_left[1]], 'k-')[0])
+                fov_lines.append(plt.plot([robot_position[0], fov_right[0]], [robot_position[1], fov_right[1]], 'k-')[0])
+                fov_lines.append(plt.plot([fov_left[0], fov_right[0]], [fov_left[1], fov_right[1]], 'k-')[0])
+
+                # Calculate FOV points at the start position 
+                fov_left_init, fov_right_init = calculate_fov_points((rx[0], ry[0]), gtheta, fov_angle=self.visibility_cbf.fov, cam_range=3)
+
+                # Calculate FOV points at the current position
+                current_fov_left, current_fov_right = calculate_fov_points(robot_position, gtheta, fov_angle=self.visibility_cbf.fov, cam_range=3)
+
+                # Draw dashed lines for the FOV boundaries
+                fov_lines.append(plt.plot([fov_left_init[0], current_fov_left[0]], [fov_left_init[1], current_fov_left[1]], 'k--', alpha=0.5)[0])
+                fov_lines.append(plt.plot([fov_right_init[0], current_fov_right[0]], [fov_right_init[1], current_fov_right[1]], 'k--', alpha=0.5)[0])
+
+                # Fill the FOV tube
+                fov_fills.append(plt.fill([fov_left_init[0], current_fov_left[0], current_fov_right[0], fov_right_init[0]],
+                        [fov_left_init[1], current_fov_left[1], current_fov_right[1], fov_right_init[1]], 'grey', alpha=0.1)[0])
+
+                # Fill the FOV triangle
+                fov_fills.append(plt.fill([robot_position[0], fov_left[0], fov_right[0]], [robot_position[1], fov_left[1], fov_right[1]], 'k', alpha=0.1)[0])
+
+                plt.axis("equal")
+                plt.title("iteration: {}".format(i))
+                plt.xlim(-10, 10)
+                plt.ylim(-10, 10)
+                plt.pause(0.5)
+
             if solve_QP:
                 #solve QP with CBF, update control input u
                 try:
@@ -139,12 +199,11 @@ class LQR_CBF_Planner:
                 # check if LQR control input is safe with respect to CBF constraint, not solving QP
                 collision_cbf_constraint = self.collision_cbf.QP_constraint([x[0, 0] + gx, x[1, 0] + gy, x[2, 0] + gtheta], u, model = "unicycle_velocity_control")
                 visibility_cbf_constraint = self.visibility_cbf.QP_constraint([x[0, 0] + gx, x[1, 0] + gy, x[2, 0] + gtheta], u, model = "unicycle_velocity_control")
-                #visibility_cbf_constraint = True # FIXME: temporary
                 if not collision_cbf_constraint:
-                    print("violated collision cbf constraint")
+                    #print("violated collision cbf constraint")
                     break
-                if not visibility_cbf_constraint:
-                    print("violated visibility cbf constraint")
+                if self.visibility and not visibility_cbf_constraint:
+                    #print("violated visibility cbf constraint")
                     # violate either of constraint
                     break
 
@@ -165,57 +224,18 @@ class LQR_CBF_Planner:
                 # print('errors ', d)
                 break
 
-            # animation
-            if show_animation: 
-                # for stopping simulation with the 'esc' key
-                # Remove previous FOV and triangle
-                for line in fov_lines:
-                    line.remove()
-                fov_lines.clear()
-                if fov_triangle:
-                    fov_triangle.remove()
-
-                plt.gcf().canvas.mpl_connect('key_release_event',
-                        lambda event: [exit(0) if event.key == 'escape' else None])
-                plt.plot(sx, sy, "or")
-                plt.plot(gx, gy, "ob")
-                plt.plot(rx, ry, "-r")
-
-                robot_position = (rx[-1], ry[-1])
-                yaw = ryaw[-1]
-
-                robot_circle = plt.Circle(robot_position, 0.1, color='blue', fill=True)
-                plt.gca().add_patch(robot_circle)
-
-                # Draw the yaw line
-                yaw_line_end = (robot_position[0] + math.cos(yaw), robot_position[1] + math.sin(yaw))
-                plt.plot([robot_position[0], yaw_line_end[0]], [robot_position[1], yaw_line_end[1]], 'g-')
-
-                # Calculate and draw the FOV
-                fov_left, fov_right = calculate_fov_points(robot_position, yaw, 90, 3)
-                fov_lines.append(plt.plot([robot_position[0], fov_left[0]], [robot_position[1], fov_left[1]], 'k-')[0])
-                fov_lines.append(plt.plot([robot_position[0], fov_right[0]], [robot_position[1], fov_right[1]], 'k-')[0])
-                fov_lines.append(plt.plot([fov_left[0], fov_right[0]], [fov_left[1], fov_right[1]], 'k-')[0])
-
-                # Fill the FOV triangle
-                fov_triangle = plt.fill([robot_position[0], fov_left[0], fov_right[0]], [robot_position[1], fov_left[1], fov_right[1]], 'k', alpha=0.1)[0]
-
-                plt.axis("equal")
-                plt.title("iteration: {}".format(i))
-                plt.xlim(-10, 10)
-                plt.ylim(-10, 10)
-                plt.pause(1.5)
 
         if show_animation:
             # Remove previous FOV and triangle
             for line in fov_lines:
                 line.remove()
             fov_lines.clear()
-            if fov_triangle:
-                fov_triangle.remove()
+            for fill in fov_fills:
+                fill.remove()
+            fov_fills.clear()
 
         if not found_path:
-            print("Cannot found !!")
+            #print("Cannot found !!")
             return [rx, ry, ryaw], error, found_path
 
         #print("Fonud path to goal")
@@ -226,7 +246,7 @@ class LQR_CBF_Planner:
         """
         Finite horizon discrete-time LQR
         """
-        N = 50
+        N = int(self.MAX_TIME / self.DT)
         # Create a list of N + 1 elements
         P = [None] * (N + 1)
         Qf = Q
@@ -292,8 +312,8 @@ class LQR_CBF_Planner:
         return np.round(A_lin, 4), np.round(B_lin, 4), np.round(C_lin, 4)
 
 # Function to calculate the FOV triangle points
-def calculate_fov_points(position, yaw, fov_angle = 90, cam_range = 3):
-    half_fov = np.deg2rad(fov_angle / 2)
+def calculate_fov_points(position, yaw, fov_angle = math.pi/2, cam_range = 3):
+    half_fov = fov_angle/2
     left_angle = yaw - half_fov
     right_angle = yaw + half_fov
 
@@ -317,7 +337,7 @@ if __name__ == '__main__':
     ntest = 20  # number of goal
     area = 10.0  # sampling area
 
-    lqr_cbf_planner = LQR_CBF_Planner()
+    lqr_cbf_planner = LQR_CBF_Planner(visibility=True)
 
     # initialize a has table for storing LQR gain
     # TODO: this should be modified to be optional 
@@ -334,7 +354,7 @@ if __name__ == '__main__':
         stheta = math.atan2(gy-sy, gx-sx)
 
         # add a small noise to the stheta
-        stheta += random.uniform(-math.pi/4, math.pi/4)
+        stheta += random.uniform(-math.pi/1, math.pi/1)
 
         start_node = Node([sx, sy, stheta])
         goal_node = Node([gx, gy])
