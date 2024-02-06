@@ -23,11 +23,11 @@ Currently. only supports unicycle model with velocity control.
 
 class Visibility_CBF:
     def __init__(self):
-        self.DT = 0.2  #Integration Length
+        self.DT = 0.1  #Integration Length
         self.N = 50 # Number of Control Updates
 
         # TODO: should be tuned and add explanation
-        self.k1_unicyle_cbf = 2 # CBF coefficient for h(x)
+        self.k1_unicyle_cbf = 3 # CBF coefficient for h(x)
 
         # robot attributes
         self.fov = 90 * (math.pi/180) # field of view
@@ -61,7 +61,9 @@ class Visibility_CBF:
 
             xc = self.critical_point[0]
             yc = self.critical_point[1]
-            print("yc", yc, "xc", xc, "y", y, "x", x)
+            #print("yc", yc, "xc", xc, "y", y, "x", x)
+            #q = 180/3.14
+            #print("thetac before norm: ", math.atan2(yc-y, xc-x)*q)
             thetac = angle_normalize(math.atan2(yc-y, xc-x))
 
             # temporal variable
@@ -74,6 +76,7 @@ class Visibility_CBF:
             if tt_rot == 0.0:
                 # don't even need to rotate
                 # don't have to check the ramainder, because it must satisfy the CBF constraint
+                #print("tt_rot is 0")
                 return True
 
             dist = math.hypot(x-xc, y-yc)
@@ -81,17 +84,17 @@ class Visibility_CBF:
 
             # Unicycle with velocity control
             h = tt_reach - tt_rot
-            print("theta, thetac ", theta, thetac)
-            print("dtheta ", math.acos(z), dtheta)
-            print("tt_reach", tt_reach)
-            print("tt_rot", tt_rot)
-            print("z", z)
+            # print("theta, thetac ", theta*q, thetac*q)
+            # print("dtheta ", math.acos(z)*q, dtheta*q)
+            # print("tt_reach", tt_reach)
+            # print("tt_rot", tt_rot)
+            # print("z", z)
             Lfh = (x-xc)/dist*math.cos(theta) + (y-yc)/dist*math.sin(theta)
             Lgh = -1/abs(self.w_upper_lim) * (1/math.sqrt(1 - z**2)) * (math.sin(theta)*math.cos(thetac) - math.cos(theta)*math.sin(thetac))
     
             CBF_Constraint = Lfh + Lgh*w + self.k1_unicyle_cbf*h
 
-            print(CBF_Constraint)
+            #print(CBF_Constraint)
 
             if CBF_Constraint < 0:
                 return False
