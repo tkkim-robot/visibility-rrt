@@ -2,6 +2,7 @@ import math
 import time
 import copy
 import numpy as np
+import os
 
 from utils import env, plotting, utils
 from utils.node import Node
@@ -96,6 +97,8 @@ class LQRrrtStar:
         self.path = self.extract_path(node_end=self.vertex[index])
         # from start to end
         self.path.reverse()
+        # save trajectory
+        self.save_traj_npy(self.path)
         # visualization
         self.plotting.animation(self.vertex, self.path, "rrt*, N = " + str(self.iter_max))
 
@@ -256,6 +259,15 @@ class LQRrrtStar:
         dx = node_end.x - node_start.x
         dy = node_end.y - node_start.y
         return math.hypot(dx, dy), math.atan2(dy, dx)
+
+    @staticmethod
+    def save_traj_npy(state_list):
+        cwd = os.getcwd()
+        os_path_for_state = os.path.join(cwd, 'output',
+                                         'state_traj.npy')
+        print("Saving state trajectory...")
+        np.save(os_path_for_state, np.array(state_list))
+        print("Complete.")
 
 if __name__ == '__main__':
     x_start = (5.0, 5.0, math.pi/2)  # Starting node (x, y, yaw)
