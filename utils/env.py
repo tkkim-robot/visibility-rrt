@@ -1,18 +1,29 @@
+
 class Env:
     def __init__(self):
-        self.x_range = (0, 50)
-        self.y_range = (0, 30)
-        self.obs_boundary = self.obs_boundary()
+        WIDTH = 15
+        HEIGHT = 15
+        self.x_range = (0, WIDTH)
+        self.y_range = (0, HEIGHT)
+        self.obs_boundary = self.obs_boundary(WIDTH, HEIGHT)
         self.obs_circle = self.obs_circle()
         self.obs_rectangle = self.obs_rectangle()
 
     @staticmethod
-    def obs_boundary():  # circle
+    def obs_boundary(width, height):  # circle
         obs_boundary = [
             [0, 0, 1, 30],
             [0, 30, 50, 1],
             [1, 0, 50, 1],
             [50, 1, 1, 30]
+        ]
+        w = width
+        h = height
+        obs_boundary = [
+            [0, 0, 1, h],
+            [0, h, w, 1],
+            [1, 0, w, 1],
+            [w, 1, 1, h]
         ]
         return obs_boundary
 
@@ -59,9 +70,21 @@ class Env:
             [45, 25, 3]
         ]
         obs_cir = [
-            [10, 10, 3],
+            [7.5, 2, 1],
+            [7.5, 4, 1],
+            [7.5, 6, 1],
+            [7.5, 8, 1],
 
         ]
+        # randomly generate 6 obstacles
+        # import random
+        # obs_cir = []
+        # for i in range(6):
+        #     x = random.uniform(0, 10)
+        #     y = random.uniform(0, 10)
+        #     r = random.uniform(1, 1)
+        #     obs_cir.append([x, y, r])
+
        #obs_cir = [[100, 100, 1]]
 
         return obs_cir

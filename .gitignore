@@ -3,3 +3,4 @@
 __pycache__/
 utils/__pycache__/
 *.PNG
+mathematica/
