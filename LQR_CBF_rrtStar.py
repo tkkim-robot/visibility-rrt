@@ -25,7 +25,7 @@ SHOW_ANIMATION = False
 
 class LQRrrtStar:
     def __init__(self, x_start, x_goal, max_sampled_node_dist=10, max_rewiring_node_dist=10,
-                 goal_sample_rate=0.1, rewiring_radius=20, iter_max=1000, solve_QP=False):
+                 goal_sample_rate=0.1, rewiring_radius=20, iter_max=1000, solve_QP=False, visibility=True):
         # arguments
         self.x_start = Node(x_start)
         self.x_goal = Node(x_goal)
@@ -38,7 +38,7 @@ class LQRrrtStar:
 
         # tuning parameters
         self.sample_delta = 0.5 # max dist in random sample [m]
-        self.goal_len = 8
+        self.goal_len = 1 
 
         # initialization
         self.vertex = [self.x_start] # store all nodes in the RRT tre
@@ -52,7 +52,7 @@ class LQRrrtStar:
         utils_ = utils.Utils() # in this code, only use is_collision()
         self.is_collision = utils_.is_collision
         # self.obs_circle = self.env.obs_circle
-        lqr_cbf_planner = LQR_CBF_Planner()
+        lqr_cbf_planner = LQR_CBF_Planner(visibility=visibility)
         self.lqr_cbf_planning = lqr_cbf_planner.lqr_cbf_planning
         self.LQR_Gain = dict() # call by reference, so it's modified in LQRPlanner
 
@@ -70,7 +70,7 @@ class LQRrrtStar:
                 print('rrtStar 1000 iterations sampling time: ', time.time() - start_time)
                 start_time = time.time()
 
-            if k % 1000 == 0:
+            if k % 500 == 0:
                 print('rrtStar sampling iterations: ', k)
                 self.plotting.animation_online(self.vertex, "rrtStar", True)
 
@@ -94,6 +94,8 @@ class LQRrrtStar:
 
         # extract path to the end_node
         self.path = self.extract_path(node_end=self.vertex[index])
+        # from start to end
+        self.path.reverse()
         # visualization
         self.plotting.animation(self.vertex, self.path, "rrt*, N = " + str(self.iter_max))
 
@@ -202,11 +204,12 @@ class LQRrrtStar:
         
 
     def rewire(self, node_new, neighbor_index):
-        print(len(neighbor_index))
+        #print(len(neighbor_index))
         for i in neighbor_index:
             node_neighbor = self.vertex[i]
 
             # check collision and LQR reachabilty
+            print(math.hypot(node_new.x - node_neighbor.x, node_new.y - node_neighbor.y))
             if not self.is_collision(node_new, node_neighbor):
                 new_cost, can_rach = self.cal_LQR_new_cost(node_new, node_neighbor)
 
@@ -216,7 +219,7 @@ class LQRrrtStar:
                     self.updateCosts(node_neighbor)
 
     def updateCosts(self,node):
-        print("update costs: ", node.childrenNodeInds)
+        #print("update costs: ", node.childrenNodeInds)
         for ich in node.childrenNodeInds: 
             self.vertex[ich].cost = self.cal_LQR_new_cost(node,self.vertex[ich])[0] # FIXME since we already know that this path is safe, we only need to compute the cost 
             self.updateCosts(self.vertex[ich])
@@ -237,13 +240,14 @@ class LQRrrtStar:
         return len(self.vertex) - 1
 
     def extract_path(self, node_end):
-        path = [[self.x_goal.x, self.x_goal.y]]
+        path = [[self.x_goal.x, self.x_goal.y, self.x_goal.yaw]]
         node = node_end
 
         while node.parent is not None:
-            path.append([node.x, node.y])
+            print(node.x, node.y, node.yaw)
+            path.append([node.x, node.y, node.yaw])
             node = node.parent
-        path.append([node.x, node.y])
+        path.append([node.x, node.y, node.yaw])
 
         return path
 
@@ -254,14 +258,23 @@ class LQRrrtStar:
         return math.hypot(dx, dy), math.atan2(dy, dx)
 
 if __name__ == '__main__':
-    x_start = (2.0, 2.0, 0.0)  # Starting node (x, y, yaw)
+    x_start = (5.0, 5.0, math.pi/2)  # Starting node (x, y, yaw)
     #x_goal = (30.0, 24.0)  # Goal node
     x_goal = (18.0, 10.0)  # Goal node
+    x_goal = (10.0, 18.0)  # Goal node
+    x_goal = (10.0, 3.0)  # Goal node
 
-    lqr_rrt_star = LQRrrtStar(x_start=x_start, x_goal=x_goal, max_sampled_node_dist=10,
-                              max_rewiring_node_dist=10,
-                              goal_sample_rate=0.10,
-                              rewiring_radius=20, 
+    # lqr_rrt_star = LQRrrtStar(x_start=x_start, x_goal=x_goal, max_sampled_node_dist=10,
+    #                           max_rewiring_node_dist=10,
+    #                           goal_sample_rate=0.10,
+    #                           rewiring_radius=20, 
+    #                           iter_max=1000,
+    #                           solve_QP=False)
+    lqr_rrt_star = LQRrrtStar(x_start=x_start, x_goal=x_goal, max_sampled_node_dist=1,
+                              max_rewiring_node_dist=2,
+                              goal_sample_rate=0.00,
+                              rewiring_radius=2, 
                               iter_max=500,
-                              solve_QP=False)
+                              solve_QP=False,
+                              visibility=False)
     lqr_rrt_star.planning()

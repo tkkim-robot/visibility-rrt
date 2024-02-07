@@ -5,9 +5,10 @@ Plotting tools for Sampling-based algorithms
 
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-import os
-import sys
 import utils.env as env
+from utils.utils import calculate_fov_points, linewidth_from_data_units
+import math
+import numpy as np
 
 class Plotting:
     def __init__(self, x_start, x_goal):
@@ -20,6 +21,7 @@ class Plotting:
     def animation(self, nodelist, path, name, animation=False):
         self.plot_grid(name)
         self.plot_visited(nodelist, animation)
+        self.plot_path_fov(path, math.pi/4, 3)
         self.plot_path(path)
 
     def animation_online(self, nodelist, name, animation=False):
@@ -117,3 +119,42 @@ class Plotting:
             plt.pause(0.01)
             plt.savefig("LQR-CBF_result.PNG")
         plt.show()
+
+    @staticmethod
+    def plot_path_fov(path, fov_angle, cam_range):
+
+        path = np.array(path)
+        width = linewidth_from_data_units(cam_range/math.sqrt(2), plt.gca(), reference='y')
+        plt.plot(path[:, 0], path[:, 1], 'k', alpha=0.5, linewidth=width)
+
+    #def plot_path_fov(path, fov_angle, cam_range):
+        """
+        this function is ommitted for now. The visualization is not smooth
+        """
+        # if len(path) < 2:
+        #     return  # Need at least two points to define a path
+
+        # lefts = []
+        # rights = []
+        # for k in range(1, len(path)):
+        #     prev_pos = path[k-1]
+        #     print(prev_pos)
+        #     cur_pos = path[k]
+        #     gtheta = cur_pos[2]
+        #     gtheta = math.atan2(cur_pos[1] - prev_pos[1], cur_pos[0] - prev_pos[0])
+        #     print(cur_pos[2])
+        #     if gtheta == None:
+        #         gtheta = math.atan2(cur_pos[1] - prev_pos[1], cur_pos[0] - prev_pos[0])
+
+        #     prev_fov_left, prev_fov_right = calculate_fov_points(prev_pos, gtheta, fov_angle=math.pi, cam_range=cam_range)
+        #     cur_fov_left, cur_fov_right = calculate_fov_points(cur_pos, gtheta, fov_angle=math.pi, cam_range=cam_range)
+
+        #     # Plot FOV union "tube"
+        #     plt.plot([prev_fov_left[0], cur_fov_left[0]], [prev_fov_left[1], cur_fov_left[1]], 'k--', alpha=0.5)  # Left boundary
+        #     plt.plot([prev_fov_right[0], cur_fov_right[0]], [prev_fov_right[1], cur_fov_right[1]], 'k--', alpha=0.5)  # Right boundary
+        #     plt.fill([prev_fov_left[0], cur_fov_left[0], cur_fov_right[0], prev_fov_right[0]],
+        #             [prev_fov_left[1], cur_fov_left[1], cur_fov_right[1], prev_fov_right[1]], 'k', alpha=0.1)  # FOV area
+            
+        #     lefts.append(prev_fov_left)
+        #     rights.append(prev_fov_right)
+        # print([lefts, rights])
