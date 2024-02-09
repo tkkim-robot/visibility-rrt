@@ -101,6 +101,7 @@ class Unicycle2D:
         return np.array([v, omega]).reshape(-1,1)
     
     def sigma(self,s):
+        print("s", s)
         return self.k2 * (np.exp(self.k1-s)-1)/(np.exp(self.k1-s)+1)
     
     def sigma_der(self,s):

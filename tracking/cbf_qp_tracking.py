@@ -3,10 +3,8 @@ import matplotlib.pyplot as plt
 import cvxpy as cp
 import os
 
-from robots.unicycle2D import Unicycle2D
-
 class UnicyclePathFollower:
-    def __init__(self, robot, obs, X0, waypoints, alpha, dt=0.05, tf=20, show_obstacles=True):
+    def __init__(self, robot, obs, X0, waypoints, alpha, dt=0.05, tf=100, show_obstacles=True):
         self.robot = robot
         self.obs = obs
         self.waypoints = waypoints
@@ -15,7 +13,7 @@ class UnicyclePathFollower:
         self.tf = tf
 
         self.current_goal_index = 0  # Index of the current goal in the path
-        self.reached_threshold = 0.3
+        self.reached_threshold = 0.6
 
         self.v_max = 1.0
         self.w_max = 0.5
@@ -43,6 +41,10 @@ class UnicyclePathFollower:
 
     def setup_robot(self, X0):
         if self.robot == 'unicycle2d':
+            try:
+                from tracking.robots.unicycle2D import Unicycle2D
+            except ImportError:
+                from robots.unicycle2D import Unicycle2D
             self.robot = Unicycle2D(X0.reshape(-1, 1), self.dt, self.ax)
 
     def setup_control_problem(self):

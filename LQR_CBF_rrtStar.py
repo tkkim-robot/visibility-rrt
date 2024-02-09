@@ -7,6 +7,7 @@ import os
 from utils import env, plotting, utils
 from utils.node import Node
 from LQR_CBF_planning import LQR_CBF_Planner
+from tracking.cbf_qp_tracking import UnicyclePathFollower
 
 
 """
@@ -95,12 +96,13 @@ class LQRrrtStar:
 
         # extract path to the end_node
         self.path = self.extract_path(node_end=self.vertex[index])
-        # from start to end
-        self.path.reverse()
+        self.path = np.array(self.path, dtype=np.float64)
         # save trajectory
         self.save_traj_npy(self.path)
         # visualization
         self.plotting.animation(self.vertex, self.path, "rrt*, N = " + str(self.iter_max))
+
+        return self.path
 
     def generate_random_node(self, goal_sample_rate=0.1):
         delta = self.sample_delta
@@ -247,10 +249,12 @@ class LQRrrtStar:
         node = node_end
 
         while node.parent is not None:
-            print(node.x, node.y, node.yaw)
+            #print(node.x, node.y, node.yaw)
             path.append([node.x, node.y, node.yaw])
             node = node.parent
         path.append([node.x, node.y, node.yaw])
+
+        path.reverse()
 
         return path
 
@@ -261,12 +265,12 @@ class LQRrrtStar:
         return math.hypot(dx, dy), math.atan2(dy, dx)
 
     @staticmethod
-    def save_traj_npy(state_list):
+    def save_traj_npy(traj):
         cwd = os.getcwd()
         os_path_for_state = os.path.join(cwd, 'output',
                                          'state_traj.npy')
         print("Saving state trajectory...")
-        np.save(os_path_for_state, np.array(state_list))
+        np.save(os_path_for_state, traj)
         print("Complete.")
 
 if __name__ == '__main__':
@@ -289,4 +293,10 @@ if __name__ == '__main__':
                               iter_max=500,
                               solve_QP=False,
                               visibility=False)
-    lqr_rrt_star.planning()
+    waypoints = lqr_rrt_star.planning()
+
+    x_init = waypoints[0]
+    obs = np.array([0.5, 0.3, 0.1]).reshape(-1, 1)
+    alpha = 2.0
+    path_follower = UnicyclePathFollower('unicycle2d', obs, x_init, waypoints,  alpha,show_obstacles=False)
+    path_follower.run()
