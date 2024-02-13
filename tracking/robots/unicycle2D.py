@@ -28,7 +28,7 @@ class Unicycle2D:
         self.dt = dt
       
         # for exp 
-        self.k1 = 0.1
+        self.k1 = 2.0
         self.k2 = 0.1
 
         # FOV parameters
@@ -101,7 +101,7 @@ class Unicycle2D:
         return np.array([v, omega]).reshape(-1,1)
     
     def sigma(self,s):
-        print("s", s)
+        #print("s", s)
         return self.k2 * (np.exp(self.k1-s)-1)/(np.exp(self.k1-s)+1)
     
     def sigma_der(self,s):

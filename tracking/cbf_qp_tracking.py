@@ -2,7 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import cvxpy as cp
 import os
-
+import glob
+import subprocess
 class UnicyclePathFollower:
     def __init__(self, robot, obs, X0, waypoints, alpha, dt=0.05, tf=100, show_obstacles=True):
         self.robot = robot
@@ -62,7 +63,7 @@ class UnicyclePathFollower:
         return np.linalg.norm(current_position[:2] - goal_position[:2]) < self.reached_threshold
 
 
-    def run(self):
+    def run(self, save_animation=False):
         for i in range(int(self.tf / self.dt)):
             if self.goal_reached(self.robot.X, np.array(self.waypoints[self.current_goal_index]).reshape(-1, 1)):
                 self.current_goal_index += 1
@@ -93,6 +94,24 @@ class UnicyclePathFollower:
             self.fig.canvas.flush_events()
             plt.pause(0.01)
 
+            if save_animation:
+                current_directory_path = os.getcwd()
+                if not os.path.exists(current_directory_path + "/output/animations"):
+                    os.makedirs(current_directory_path + "/output/animations")
+                plt.savefig(current_directory_path +
+                            "/output/animations/" + "t_step_" + str(i) + ".png")
+
+        if save_animation:
+            subprocess.call(['ffmpeg',
+                            '-i', current_directory_path+"/output/animations/" + "/t_step_%01d.png",
+                            '-r', '60',  # Changes the output FPS to 30
+                            '-pix_fmt', 'yuv420p',
+                            current_directory_path+"/output/animations/tracking.mp4"])
+
+            for file_name in glob.glob(current_directory_path +
+                            "/output/animations/*.png"):
+                os.remove(file_name)
+
         print("Simulation finished")
         plt.ioff()
         #plt.show()
@@ -110,7 +129,7 @@ if __name__ == "__main__":
     waypoints = np.array(waypoints, dtype=np.float64)
     x_init = waypoints[0]
 
-    obs = np.array([0.5, 0.3, 0.1]).reshape(-1, 1)
+    obs = np.array([8, 10.5, 0.2]).reshape(-1, 1)
     #goal = np.array([1, 1])
-    path_follower = UnicyclePathFollower('unicycle2d', obs, x_init, waypoints,  alpha, dt, tf, show_obstacles=False)
-    path_follower.run()
+    path_follower = UnicyclePathFollower('unicycle2d', obs, x_init, waypoints,  alpha, dt, tf, show_obstacles=True)
+    path_follower.run(save_animation=True)

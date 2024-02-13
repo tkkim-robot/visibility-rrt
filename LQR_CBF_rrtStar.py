@@ -286,11 +286,11 @@ if __name__ == '__main__':
     #                           rewiring_radius=20, 
     #                           iter_max=1000,
     #                           solve_QP=False)
-    lqr_rrt_star = LQRrrtStar(x_start=x_start, x_goal=x_goal, max_sampled_node_dist=1,
+    lqr_rrt_star = LQRrrtStar(x_start=x_start, x_goal=x_goal, max_sampled_node_dist=0.5,
                               max_rewiring_node_dist=2,
-                              goal_sample_rate=0.00,
+                              goal_sample_rate=0.1,
                               rewiring_radius=2, 
-                              iter_max=500,
+                              iter_max=1000,
                               solve_QP=False,
                               visibility=False)
     waypoints = lqr_rrt_star.planning()
