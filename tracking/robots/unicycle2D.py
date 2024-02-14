@@ -36,7 +36,7 @@ class Unicycle2D:
 
         # FOV parameters
         self.fov_angle = np.deg2rad(60)  # [rad]
-        self.cam_range = 2.5  # [m]
+        self.cam_range = 3.0  # [m]
 
         self.robot_radius = 0.2 # including padding
         self.max_decel = 1.0  # [m/s^2]
@@ -106,7 +106,7 @@ class Unicycle2D:
         G = np.copy(G.reshape(-1,1))
         k_v = 1.5 #0.5
         k_omega = 4.0 #0.5#2.5
-        distance = max(np.linalg.norm( self.X[0:2,0]-G[0:2,0] ) - d_min, 0.6)
+        distance = max(np.linalg.norm( self.X[0:2,0]-G[0:2,0] ) - d_min, 0.5)
         theta_d = np.arctan2(G[1,0]-self.X[1,0],G[0,0]-self.X[0,0])
         error_theta = angle_normalize( theta_d - self.X[2,0] )
 

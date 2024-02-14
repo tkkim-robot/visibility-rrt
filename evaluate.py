@@ -52,9 +52,9 @@ def evaluate():
             x_start = (5.0, 5.0, math.pi/2)  # Starting node (x, y, yaw)
             x_goal = (10.0, 3.0)  # Goal node
             if visibility:
-                path_saved = os.getcwd()+f"/output//{directory_name}/state_traj_vis_{i:03d}.npy"
+                path_saved = os.getcwd()+f"/output//{directory_name}/state_traj_vis_{i+1:03d}.npy"
             else:
-                path_saved = os.getcwd()+f"/output//{directory_name}/state_traj_ori_{i:03d}.npy"
+                path_saved = os.getcwd()+f"/output//{directory_name}/state_traj_ori_{i+1:03d}.npy"
             time_took, unexpected_beh = run(x_start, x_goal, visibility, path_saved)
             print(f"Unexpected_beh: {unexpected_beh}, Time: {time_took}\n")
             # save the results with csv
