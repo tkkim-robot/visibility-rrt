@@ -2,6 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import cvxpy as cp
 
+from shapely.geometry import Polygon, Point
+from shapely.ops import unary_union
+
 import sys
 # at trackin_mpc/robots/unicycle2D.py, import utils/utils.py
 sys.path.append('..')
@@ -28,25 +31,32 @@ class Unicycle2D:
         self.dt = dt
       
         # for exp 
-        self.k1 = 2.0
-        self.k2 = 0.1
+        self.k1 = 1.0
+        self.k2 = 0.5
 
         # FOV parameters
-        self.fov_angle = np.deg2rad(80)  # [rad]
+        self.fov_angle = np.deg2rad(60)  # [rad]
         self.cam_range = 3  # [m]
+
+        self.robot_radius = 0.25 # including padding
+        self.max_decel = 1.0  # [m/s^2]
 
         self.U = np.array([0,0]).reshape(-1,1)
         
         # Plot handles
-        self.radii = 0.3
+        self.vis_orient_len = 0.3
         # Robot's body represented as a scatter plot
         self.body = ax.scatter([],[],s=60,facecolors='b',edgecolors='b') #facecolors='none'
         # Robot's orientation axis represented as a line
-        self.axis,  = ax.plot([self.X[0,0],self.X[0,0]+self.radii*np.cos(self.X[2,0])],[self.X[1,0],self.X[1,0]+self.radii*np.sin(self.X[2,0])], color='r')
+        self.axis,  = ax.plot([self.X[0,0],self.X[0,0]+self.vis_orient_len*np.cos(self.X[2,0])],[self.X[1,0],self.X[1,0]+self.vis_orient_len*np.sin(self.X[2,0])], color='r')
         # Initialize FOV line handle with placeholder data
         self.fov, = ax.plot([], [], 'k--')  # Unpack the tuple returned by plot
         # Initialize FOV fill handle with placeholder data
         self.fov_fill = ax.fill([], [], 'k', alpha=0.1)[0]  # Access the first element
+        self.frontier_fill = ax.fill([], [], 'b', alpha=0.1)[0]  # Access the first element
+        self.safety_area_fill = ax.fill([], [], 'r', alpha=0.3)[0]  
+        self.frontier = Polygon() # preserve the union of all the FOV triangles
+        self.safety_area = Polygon() # preserve the union of all the safety areas
         self.render_plot()
 
     def f(self):
@@ -68,13 +78,13 @@ class Unicycle2D:
         #self.body._offsets3d = ([[x[0]],[x[1]],[x[2]]])
         self.body.set_offsets([x[0], x[1]])
         
-        self.axis.set_ydata([self.X[1,0],self.X[1,0]+self.radii*np.sin(self.X[2,0])])
-        self.axis.set_xdata( [self.X[0,0],self.X[0,0]+self.radii*np.cos(self.X[2,0])] )
+        self.axis.set_ydata([self.X[1,0],self.X[1,0]+self.vis_orient_len*np.sin(self.X[2,0])])
+        self.axis.set_xdata( [self.X[0,0],self.X[0,0]+self.vis_orient_len*np.cos(self.X[2,0])] )
 
         # Calculate FOV points
         fov_left, fov_right = self.calculate_fov_points()
 
-        # Define the points of the FOV triangle (including robot's position)
+        # Define the points of the FOV triangle (including robot's robot_position)
         fov_x_points = [self.X[0, 0], fov_left[0], fov_right[0], self.X[0, 0]]  # Close the loop
         fov_y_points = [self.X[1, 0], fov_left[1], fov_right[1], self.X[1, 0]]
 
@@ -83,18 +93,26 @@ class Unicycle2D:
 
         # Update FOV fill handle
         self.fov_fill.set_xy(np.array([fov_x_points, fov_y_points]).T)  # Update the vertices of the polygon
+
+        if not self.frontier.is_empty:
+            frontier_x, frontier_y = self.frontier.exterior.xy
+            self.frontier_fill.set_xy(np.array([frontier_x, frontier_y]).T)  # Update the vertices of the polygon
+            #ax.fill(frontier_x, frontier_y, alpha=0.1, fc='r', ec='none')
+        if not self.safety_area.is_empty:
+            safety_x, safety_y = self.safety_area.exterior.xy
+            self.safety_area_fill.set_xy(np.array([safety_x, safety_y]).T)
     
     def nominal_input(self, G, d_min = 0.05):
         G = np.copy(G.reshape(-1,1))
-        k_v = 1.5 #0.5
-        k_omega = 1.0 #0.5#2.5
-        distance = max(np.linalg.norm( self.X[0:2,0]-G[0:2,0] ) - d_min,0)
+        k_v = 2.0 #0.5
+        k_omega = 4.0 #0.5#2.5
+        distance = max(np.linalg.norm( self.X[0:2,0]-G[0:2,0] ) - d_min,1.0)
         theta_d = np.arctan2(G[1,0]-self.X[1,0],G[0,0]-self.X[0,0])
         error_theta = angle_normalize( theta_d - self.X[2,0] )
 
         omega = k_omega * error_theta   
         if abs(error_theta) > np.deg2rad(80):
-            v = 0
+            v = 0.0
         else:
             v = k_v*( distance )*np.cos( error_theta )
 
@@ -121,6 +139,44 @@ class Unicycle2D:
         der_sigma = self.sigma_der(s)
         dh_dx = np.append( 2*( self.X[0:2] - obsX[0:2] ).T - der_sigma * ( np.array([ [np.cos(theta), np.sin(theta)] ]) ),  - der_sigma * ( -np.sin(theta)*( self.X[0,0]-obsX[0,0] ) + np.cos(theta)*( self.X[1,0] - obsX[1,0] ) ) , axis=1)
         return h, dh_dx
+    
+    def update_frontier(self):
+        fov_left, fov_right = self.calculate_fov_points()
+        robot_position = (self.X[0, 0], self.X[1, 0])
+        new_area = Polygon([robot_position, fov_left, fov_right])
+    
+        self.frontier = self.frontier.union(new_area)
+        #self.frontier = self.frontier.simplify(0.1)
+
+    def update_safety_area(self):
+        theta = self.X[2, 0]
+        robot_position = (self.X[0, 0], self.X[1, 0])
+        v = self.U[0, 0]
+        braking_distance = v**2/(2*self.max_decel)
+
+        # Calculate front and back circle centers based on the braking distance
+        back_center = robot_position
+        front_center = (robot_position[0] + braking_distance * np.cos(theta),
+                        robot_position[1] + braking_distance * np.sin(theta))
+        
+        # Create circles at the front and back centers
+        back_circle = Point(back_center).buffer(self.robot_radius)
+        front_circle = Point(front_center).buffer(self.robot_radius)
+        
+        # Create the rectangle extending by braking_distance in the heading direction
+        rect_corners = [
+            (back_center[0] - self.robot_radius * np.sin(theta), back_center[1] + self.robot_radius * np.cos(theta)),
+            (back_center[0] + self.robot_radius * np.sin(theta), back_center[1] - self.robot_radius * np.cos(theta)),
+            (front_center[0] + self.robot_radius * np.sin(theta), front_center[1] - self.robot_radius * np.cos(theta)),
+            (front_center[0] - self.robot_radius * np.sin(theta), front_center[1] + self.robot_radius * np.cos(theta)),
+        ]
+        rectangle = Polygon(rect_corners)
+        
+        # Combine the shapes to form the capsule
+        self.safety_area = unary_union([back_circle, rectangle, front_circle])
+    
+    def is_beyond_frontier(self):
+        return not self.frontier.contains(self.safety_area)
     
     def calculate_fov_points(self):
         """
@@ -162,8 +218,8 @@ if __name__ == "__main__":
     b1 = cp.Parameter((num_constraints,1), value = np.zeros((num_constraints,1)))
     objective = cp.Minimize( cp.sum_squares( u - u_ref ) ) 
     const = [A1 @ u + b1 >= 0]
-    alpha = 2.0 #10.0
-    const += [ cp.abs( u[0,0] ) <= 1.0 ]
+    alpha = 5.0 #10.0
+    const += [ cp.abs( u[0,0] ) <= 1.5 ]
     const += [ cp.abs( u[1,0] ) <= 0.5 ]
     cbf_controller = cp.Problem( objective, const )
 

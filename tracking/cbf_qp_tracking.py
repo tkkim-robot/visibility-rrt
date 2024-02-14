@@ -15,9 +15,10 @@ class UnicyclePathFollower:
 
         self.current_goal_index = 0  # Index of the current goal in the path
         self.reached_threshold = 0.6
+        self.unexpected_beh = 0
 
-        self.v_max = 1.0
-        self.w_max = 0.5
+        self.v_max = 1.5
+        self.w_max = 1.0
 
         # Initialize plotting
         plt.ion()
@@ -72,10 +73,11 @@ class UnicyclePathFollower:
                     print("All waypoints reached.")
                     break
                 else:
-                    print(f"Moving to next waypoint: {self.waypoints[self.current_goal_index]}")
+                    #print(f"Moving to next waypoint: {self.waypoints[self.current_goal_index]}")
+                    pass
 
             goal = np.array(self.waypoints[self.current_goal_index][0:2]) # set goal to next waypoint's (x,y)
-            print(np.array(self.waypoints[self.current_goal_index][0:2]))
+
             h, dh_dx = self.robot.agent_barrier(self.obs)
             self.u_ref.value = self.robot.nominal_input(goal)
             self.A1.value = dh_dx @ self.robot.g()
@@ -86,16 +88,25 @@ class UnicyclePathFollower:
                 print("ERROR in QP")
                 break
 
-            print(f"control input: {self.u.value.T}, h:{h}")
+            #print(f"control input: {self.u.value.T}, h:{h}")
             self.robot.step(self.u.value)
             self.robot.render_plot()
+
+            # update FOV
+            self.robot.update_frontier()
+            self.robot.update_safety_area()
+            if i > int(3.0 / self.dt):
+                flag = self.robot.is_beyond_frontier()
+                self.unexpected_beh += flag
+                if flag:
+                    print("Cumulative unexpected behavior: {}".format(self.unexpected_beh))
 
             self.fig.canvas.draw()
             self.fig.canvas.flush_events()
             plt.pause(0.01)
 
             if save_animation:
-                current_directory_path = os.getcwd()
+                current_directory_path = os.getcwd() 
                 if not os.path.exists(current_directory_path + "/output/animations"):
                     os.makedirs(current_directory_path + "/output/animations")
                 plt.savefig(current_directory_path +
@@ -124,12 +135,12 @@ if __name__ == "__main__":
     tf = 100
     num_steps = int(tf/dt)
 
-    path_to_continuous_waypoints = os.getcwd()+"/output/state_traj.npy"
+    path_to_continuous_waypoints = os.getcwd()+"/output/state_traj_ori_1.npy"
     waypoints = np.load(path_to_continuous_waypoints, allow_pickle=True)
     waypoints = np.array(waypoints, dtype=np.float64)
     x_init = waypoints[0]
 
-    obs = np.array([8, 10.5, 0.2]).reshape(-1, 1)
+    obs = np.array([0.8, 10.5, 0.2]).reshape(-1, 1)
     #goal = np.array([1, 1])
-    path_follower = UnicyclePathFollower('unicycle2d', obs, x_init, waypoints,  alpha, dt, tf, show_obstacles=True)
+    path_follower = UnicyclePathFollower('unicycle2d', obs, x_init, waypoints,  alpha, dt, tf, show_obstacles=False)
     path_follower.run(save_animation=True)
