@@ -27,7 +27,8 @@ SHOW_ANIMATION = False
 
 class LQRrrtStar:
     def __init__(self, x_start, x_goal, max_sampled_node_dist=10, max_rewiring_node_dist=10,
-                 goal_sample_rate=0.1, rewiring_radius=20, iter_max=1000, solve_QP=False, visibility=True):
+                 goal_sample_rate=0.1, rewiring_radius=20, iter_max=1000, solve_QP=False, visibility=True,
+                 show_animation=False):
         # arguments
         self.x_start = Node(x_start)
         self.x_goal = Node(x_goal)
@@ -37,6 +38,7 @@ class LQRrrtStar:
         self.rewiring_radius = rewiring_radius # [m]
         self.iter_max = iter_max
         self.solve_QP = solve_QP
+        self.show_animation = show_animation
 
         # tuning parameters
         self.sample_delta = 0.5 # max dist in random sample [m]
@@ -59,6 +61,10 @@ class LQRrrtStar:
         self.LQR_Gain = dict() # call by reference, so it's modified in LQRPlanner
 
     def planning(self):
+        print("===================================")
+        print("============  RRT*   ==============")
+        print("Start generating path.")
+    
         start_time = time.time()
 
         for k in range(self.iter_max):
@@ -66,15 +72,16 @@ class LQRrrtStar:
             node_nearest = self.nearest_neighbor(self.vertex, node_rand)
             node_new = self.LQR_steer(node_nearest, node_rand)
 
-            # visualization
-            if k % 100 == 0:
-                print('rrtStar sampling iterations: ', k)
-                print('rrtStar 1000 iterations sampling time: ', time.time() - start_time)
-                start_time = time.time()
+            if self.show_animation:
+                # visualization
+                if k % 100 == 0:
+                    print('rrtStar sampling iterations: ', k)
+                    print('rrtStar 1000 iterations sampling time: ', time.time() - start_time)
+                    start_time = time.time()
 
-            if k % 500 == 0:
-                print('rrtStar sampling iterations: ', k)
-                self.plotting.animation_online(self.vertex, "rrtStar", True)
+                if k % 500 == 0:
+                    print('rrtStar sampling iterations: ', k)
+                    self.plotting.animation_online(self.vertex, "rrtStar", True)
 
             # when node_new is feasible and safe
             if node_new and not self.is_collision(node_nearest, node_new):
@@ -100,8 +107,11 @@ class LQRrrtStar:
         # save trajectory
         self.save_traj_npy(self.path)
         # visualization
-        self.plotting.animation(self.vertex, self.path, "rrt*, N = " + str(self.iter_max))
+        if self.show_animation:
+            self.plotting.animation(self.vertex, self.path, "rrt*, N = " + str(self.iter_max))
 
+        print("====  Path planning finished  =====")
+        print("===================================\n")
         return self.path
 
     def generate_random_node(self, goal_sample_rate=0.1):
@@ -214,7 +224,7 @@ class LQRrrtStar:
             node_neighbor = self.vertex[i]
 
             # check collision and LQR reachabilty
-            print(math.hypot(node_new.x - node_neighbor.x, node_new.y - node_neighbor.y))
+            #print(math.hypot(node_new.x - node_neighbor.x, node_new.y - node_neighbor.y))
             if not self.is_collision(node_new, node_neighbor):
                 new_cost, can_rach = self.cal_LQR_new_cost(node_new, node_neighbor)
 
@@ -271,20 +281,22 @@ class LQRrrtStar:
                                          'state_traj.npy')
         print("Saving state trajectory...")
         np.save(os_path_for_state, traj)
-        print("Complete.")
 
 if __name__ == '__main__':
+    SHOW_ANIMATION = False
     x_start = (5.0, 5.0, math.pi/2)  # Starting node (x, y, yaw)
     x_goal = (10.0, 18.0)  # Goal node
     x_goal = (10.0, 3.0)  # Goal node
 
-    lqr_rrt_star = LQRrrtStar(x_start=x_start, x_goal=x_goal, max_sampled_node_dist=1.0,
+    lqr_rrt_star = LQRrrtStar(x_start=x_start, x_goal=x_goal,
+                              max_sampled_node_dist=1.0,
                               max_rewiring_node_dist=2,
                               goal_sample_rate=0.1,
                               rewiring_radius=2,  
                               iter_max=1000,
                               solve_QP=False,
-                              visibility=True)
+                              visibility=True,
+                              show_animation=SHOW_ANIMATION)
     waypoints = lqr_rrt_star.planning()
 
     x_init = waypoints[0]
@@ -292,5 +304,5 @@ if __name__ == '__main__':
     alpha = 2.0
     path_follower = UnicyclePathFollower('unicycle2d', obs, x_init, waypoints,  alpha,
                                          show_obstacles=False,
-                                         show_animation=True)
+                                         show_animation=SHOW_ANIMATION)
     unexpected_beh = path_follower.run(save_animation=False)

@@ -69,6 +69,9 @@ class UnicyclePathFollower:
 
 
     def run(self, save_animation=False):
+        print("===================================")
+        print("============  CBF-QP  =============")
+        print("Start following the generated path.")
         unexpected_beh = 0
 
         for i in range(int(self.tf / self.dt)):
@@ -131,7 +134,8 @@ class UnicyclePathFollower:
                             "/output/animations/*.png"):
                 os.remove(file_name)
 
-        print("Simulation finished")
+        print("=====   Simulation finished  =====")
+        print("===================================\n")
         if self.show_animation:
             plt.ioff()
             plt.close()
