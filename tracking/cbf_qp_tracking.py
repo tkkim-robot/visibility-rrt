@@ -14,9 +14,9 @@ class UnicyclePathFollower:
         self.tf = tf
 
         self.current_goal_index = 0  # Index of the current goal in the path
-        self.reached_threshold = 0.6
+        self.reached_threshold = 0.3
 
-        self.v_max = 1.5
+        self.v_max = 2.0
         self.w_max = 1.0
 
         self.show_animation = show_animation
@@ -148,7 +148,8 @@ if __name__ == "__main__":
     tf = 100
     num_steps = int(tf/dt)
 
-    path_to_continuous_waypoints = os.getcwd()+"/output/state_traj_ori_1.npy"
+    path_to_continuous_waypoints = os.getcwd()+"/output/state_traj_ori_000.npy"
+    path_to_continuous_waypoints = os.getcwd()+"/output/state_traj_vis_000.npy"
     waypoints = np.load(path_to_continuous_waypoints, allow_pickle=True)
     waypoints = np.array(waypoints, dtype=np.float64)
     x_init = waypoints[0]
@@ -158,4 +159,4 @@ if __name__ == "__main__":
     path_follower = UnicyclePathFollower('unicycle2d', obs, x_init, waypoints,  alpha, dt, tf, 
                                          show_obstacles=False,
                                          show_animation=True)
-    unexpected_beh = path_follower.run(save_animation=True)
+    unexpected_beh = path_follower.run(save_animation=False)

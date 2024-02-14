@@ -42,7 +42,7 @@ class LQRrrtStar:
         self.path_saved = path_saved
 
         # tuning parameters
-        self.sample_delta = 0.5 # max dist in random sample [m]
+        self.sample_delta = 0.5 # pad the environment boundary
         self.goal_len = 1 
 
         # initialization
@@ -297,7 +297,7 @@ if __name__ == '__main__':
                               rewiring_radius=2,  
                               iter_max=1000,
                               solve_QP=False,
-                              visibility=True,
+                              visibility=False,
                               show_animation=SHOW_ANIMATION)
     waypoints = lqr_rrt_star.planning()
 
