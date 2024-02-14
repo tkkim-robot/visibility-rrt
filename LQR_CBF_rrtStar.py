@@ -286,17 +286,17 @@ if __name__ == '__main__':
     #                           rewiring_radius=20, 
     #                           iter_max=1000,
     #                           solve_QP=False)
-    lqr_rrt_star = LQRrrtStar(x_start=x_start, x_goal=x_goal, max_sampled_node_dist=0.5,
+    lqr_rrt_star = LQRrrtStar(x_start=x_start, x_goal=x_goal, max_sampled_node_dist=1.0,
                               max_rewiring_node_dist=2,
                               goal_sample_rate=0.1,
-                              rewiring_radius=2, 
+                              rewiring_radius=2,  
                               iter_max=1000,
                               solve_QP=False,
-                              visibility=False)
+                              visibility=True)
     waypoints = lqr_rrt_star.planning()
 
     x_init = waypoints[0]
-    obs = np.array([0.5, 0.3, 0.1]).reshape(-1, 1)
+    obs = np.array([0.5, 0.3, 0.1]).reshape(-1, 1) #FIXME: effectless in this case
     alpha = 2.0
     path_follower = UnicyclePathFollower('unicycle2d', obs, x_init, waypoints,  alpha,show_obstacles=False)
     path_follower.run()
