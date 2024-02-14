@@ -108,7 +108,7 @@ class UnicyclePathFollower:
             if i > int(3.0 / self.dt):
                 beyond_flag = self.robot.is_beyond_frontier()
                 unexpected_beh += beyond_flag
-                if beyond_flag:
+                if beyond_flag and self.show_animation:
                     print("Cumulative unexpected behavior: {}".format(unexpected_beh))
 
             if self.show_animation:

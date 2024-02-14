@@ -28,7 +28,7 @@ SHOW_ANIMATION = False
 class LQRrrtStar:
     def __init__(self, x_start, x_goal, max_sampled_node_dist=10, max_rewiring_node_dist=10,
                  goal_sample_rate=0.1, rewiring_radius=20, iter_max=1000, solve_QP=False, visibility=True,
-                 show_animation=False):
+                 show_animation=False, path_saved=None):
         # arguments
         self.x_start = Node(x_start)
         self.x_goal = Node(x_goal)
@@ -39,6 +39,7 @@ class LQRrrtStar:
         self.iter_max = iter_max
         self.solve_QP = solve_QP
         self.show_animation = show_animation
+        self.path_saved = path_saved
 
         # tuning parameters
         self.sample_delta = 0.5 # max dist in random sample [m]
@@ -105,7 +106,7 @@ class LQRrrtStar:
         self.path = self.extract_path(node_end=self.vertex[index])
         self.path = np.array(self.path, dtype=np.float64)
         # save trajectory
-        self.save_traj_npy(self.path)
+        self.save_traj_npy(self.path, self.path_saved)
         # visualization
         if self.show_animation:
             self.plotting.animation(self.vertex, self.path, "rrt*, N = " + str(self.iter_max))
@@ -142,7 +143,7 @@ class LQRrrtStar:
         node_goal.yaw = theta
 
         # rtraj = [rx, ry, ryaw]: feasible robot trajectory
-        rtraj, _, _, = self.lqr_cbf_planning(node_start, node_goal, self.LQR_Gain, solve_QP=self.solve_QP, show_animation=SHOW_ANIMATION)
+        rtraj, _, _, = self.lqr_cbf_planning(node_start, node_goal, self.LQR_Gain, solve_QP=self.solve_QP, show_animation=False)
         rx, ry, ryaw = rtraj
         if len(rx) == 1:
             return None
@@ -275,15 +276,16 @@ class LQRrrtStar:
         return math.hypot(dx, dy), math.atan2(dy, dx)
 
     @staticmethod
-    def save_traj_npy(traj):
-        cwd = os.getcwd()
-        os_path_for_state = os.path.join(cwd, 'output',
-                                         'state_traj.npy')
+    def save_traj_npy(traj, path_saved):
+        if path_saved  is None:
+            cwd = os.getcwd()
+            path_saved = os.path.join(cwd, 'output',
+                                            'state_traj.npy')
         print("Saving state trajectory...")
-        np.save(os_path_for_state, traj)
+        np.save(path_saved , traj)
 
 if __name__ == '__main__':
-    SHOW_ANIMATION = False
+    SHOW_ANIMATION = True
     x_start = (5.0, 5.0, math.pi/2)  # Starting node (x, y, yaw)
     x_goal = (10.0, 18.0)  # Goal node
     x_goal = (10.0, 3.0)  # Goal node
