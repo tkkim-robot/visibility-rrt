@@ -34,9 +34,9 @@ class CBF:
         self.k2_unicyle_cbf = 3 # CBF coefficient for Lfh(x)
 
         self.x_obstacle = obstacle_list
-        self.w_lower_lim = -5
+        self.w_lower_lim = -5 # only used in QP
         self.w_upper_lim = 5
-        self.unicycle_constant_v = 1.0
+        self.unicycle_constant_v = 2.0
 
     def set_initial_state(self, initial_state):
         self.init_state = np.array(initial_state)
