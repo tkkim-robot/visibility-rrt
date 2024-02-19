@@ -3,11 +3,12 @@ import numpy as np
 import os
 import time
 import pandas as pd
+import matplotlib.pyplot as plt
 
 from LQR_CBF_rrtStar import LQRrrtStar
 from tracking.cbf_qp_tracking import UnicyclePathFollower
 
-
+import gc
 
 def run(x_start, x_goal, visibility, path_saved):
     lqr_rrt_star = LQRrrtStar(x_start=x_start, x_goal=x_goal,
@@ -55,7 +56,10 @@ def evaluate():
                 path_saved = os.getcwd()+f"/output//{directory_name}/state_traj_vis_{i+1:03d}.npy"
             else:
                 path_saved = os.getcwd()+f"/output//{directory_name}/state_traj_ori_{i+1:03d}.npy"
+            gc.disable()
             time_took, unexpected_beh = run(x_start, x_goal, visibility, path_saved)
+            gc.collect()
+            gc.enable()
             print(f"Unexpected_beh: {unexpected_beh}, Time: {time_took}\n")
             # save the results with csv
             with open(f'output//{directory_name}/evaluated.csv', 'a') as f:
@@ -80,10 +84,7 @@ def plot(csv_path):
     time_success = df_filtered[df_filtered['Result'] == 'Success']['Time']
     time_fail = df_filtered[df_filtered['Result'] == 'Fail']['Time']
 
-    # Visualize the results and time taken
-    import matplotlib.pyplot as plt
-
-    fig, ax = plt.subplots(2, 1, figsize=(10, 12))
+    fig, ax = plt.subplots(1, 2, figsize=(4, 6))
 
     # Plot 1: Time distribution for Success and Fail
     ax[0].hist([time_success, time_fail], color=['green', 'red'], label=['Success', 'Fail'], bins=20, alpha=0.7)
@@ -109,3 +110,4 @@ if __name__ == "__main__":
     csv_path = evaluate()
     #plot(f'output/20240214-101358/evaluated.csv')
     plot(csv_path)
+    plt.close()
