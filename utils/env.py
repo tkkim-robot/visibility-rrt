@@ -74,6 +74,7 @@ class Env:
             [7.5, 4, 1],
             [7.5, 6, 1],
             [7.5, 8, 1],
+            [12.0, 10.0, 1],
 
         ]
         # randomly generate 6 obstacles

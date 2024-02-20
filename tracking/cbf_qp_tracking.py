@@ -14,10 +14,10 @@ class UnicyclePathFollower:
         self.tf = tf
 
         self.current_goal_index = 0  # Index of the current goal in the path
-        self.reached_threshold = 0.4
+        self.reached_threshold = 0.5
 
-        self.v_max = 2.0
-        self.w_max = 1.0
+        self.v_max = 1.0
+        self.w_max = 0.5
 
         self.show_animation = show_animation
 
@@ -105,7 +105,7 @@ class UnicyclePathFollower:
             # update FOV
             self.robot.update_frontier()
             self.robot.update_safety_area()
-            if i > int(3.0 / self.dt):
+            if i > int(5.0 / self.dt): # exclude the first 5 seconds
                 beyond_flag = self.robot.is_beyond_frontier()
                 unexpected_beh += beyond_flag
                 if beyond_flag and self.show_animation:
@@ -150,7 +150,9 @@ if __name__ == "__main__":
 
     path_to_continuous_waypoints = os.getcwd()+"/output/state_traj_ori_000.npy"
     path_to_continuous_waypoints = os.getcwd()+"/output/state_traj_vis_000.npy"
-    path_to_continuous_waypoints = os.getcwd()+"/output/20240214-141316/state_traj_ori_003.npy"
+    path_to_continuous_waypoints = os.getcwd()+"/output/state_traj_vis_long.npy"
+    path_to_continuous_waypoints = os.getcwd()+"/output/state_traj_ori_long.npy"
+    path_to_continuous_waypoints = os.getcwd()+"/output/20240219-205146/state_traj_ori_003.npy"
     waypoints = np.load(path_to_continuous_waypoints, allow_pickle=True)
     waypoints = np.array(waypoints, dtype=np.float64)
     x_init = waypoints[0]

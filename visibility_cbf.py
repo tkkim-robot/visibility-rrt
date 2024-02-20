@@ -30,10 +30,11 @@ class Visibility_CBF:
         self.k1_unicyle_cbf = 3 # CBF coefficient for h(x)
 
         # robot attributes
-        self.fov = 60 * (math.pi/180) # field of view
-        self.w_lower_lim = -1.0
-        self.w_upper_lim = 1.0
-        self.unicycle_constant_v = 2.0
+        self.fov = 70 * (math.pi/180) # field of view
+        self.cam_range = 3.0 # camera range
+        self.w_lower_lim = -0.5
+        self.w_upper_lim = 0.5
+        self.unicycle_constant_v = 1.0
 
     def set_initial_state(self, initial_state):
         self.init_state = np.array(initial_state)
