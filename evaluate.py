@@ -9,6 +9,11 @@ from LQR_CBF_rrtStar import LQRrrtStar
 from tracking.cbf_qp_tracking import UnicyclePathFollower
 
 import gc
+from multiprocessing import Process, Queue
+
+def planning_wrapper(lqr_rrt_star, result_queue):
+    waypoints = lqr_rrt_star.planning()
+    result_queue.put(waypoints)  # Use a queue to safely return data from the process
 
 def run(x_start, x_goal, visibility, path_saved):
     if visibility:
@@ -26,7 +31,21 @@ def run(x_start, x_goal, visibility, path_saved):
                               show_animation=False,
                               path_saved=path_saved)
     t1 = time.time()
-    waypoints = lqr_rrt_star.planning()
+    # Use a Queue to receive the waypoints from the process
+    result_queue = Queue()
+    planning_process = Process(target=planning_wrapper, args=(lqr_rrt_star, result_queue))
+    t1 = time.time()
+    planning_process.start()
+    planning_process.join(timeout=15)
+
+    if planning_process.is_alive():
+        # If the process is still alive after the timeout, terminate it
+        planning_process.terminate()
+        planning_process.join()  # Make sure the process has terminated
+        print("Planning process was terminated due to timeout.")
+        waypoints = None
+    else:
+        waypoints = result_queue.get() if not result_queue.empty() else None
     t2 = time.time()
     time_took = t2-t1
 
@@ -46,7 +65,7 @@ def run(x_start, x_goal, visibility, path_saved):
 
     return time_took, unexpected_beh
 
-def evaluate():
+def evaluate(num_runs=10):
     # set the directory name for this evaluation, the name include the date and time
     directory_name = time.strftime("%Y%m%d-%H%M%S")
     # make a directory if it is empty
@@ -54,9 +73,8 @@ def evaluate():
     # create a csv file
     with open(f'output/{directory_name}/evaluated.csv', 'w') as f:
         f.write("Visibility,Time,Unexpected_beh\n")
-    NUM_RUNS = 20
     for visibility in [False, True]:
-        for i in range(NUM_RUNS):
+        for i in range(num_runs):
             print(f"\nVisibility: {visibility}, Run: {i+1}")
             x_start = (5.0, 5.0, math.pi/2)  # Starting node (x, y, yaw)
             x_start = (2.0, 2.0, 0)  # Starting node (x, y, yaw)
@@ -109,7 +127,7 @@ def plot(csv_path):
     summary.reset_index()
 
 if __name__ == "__main__":
-    csv_path = evaluate()
+    csv_path = evaluate(num_runs=10)
     #plot(f'output/20240214-101358/evaluated.csv')
     plot(csv_path)
     plt.close()
