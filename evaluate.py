@@ -11,12 +11,16 @@ from tracking.cbf_qp_tracking import UnicyclePathFollower
 import gc
 
 def run(x_start, x_goal, visibility, path_saved):
+    if visibility:
+        iter_max = 3000
+    else:
+        iter_max = 1000
     lqr_rrt_star = LQRrrtStar(x_start=x_start, x_goal=x_goal,
                               max_sampled_node_dist=1.0,
                               max_rewiring_node_dist=2,
                               goal_sample_rate=0.1,
                               rewiring_radius=2,  
-                              iter_max=1000,
+                              iter_max=iter_max,
                               solve_QP=False,
                               visibility=visibility,
                               show_animation=False,
@@ -36,6 +40,10 @@ def run(x_start, x_goal, visibility, path_saved):
                                          show_animation=False)
     unexpected_beh = path_follower.run(save_animation=False)
 
+    del lqr_rrt_star
+    del path_follower
+    gc.collect()
+
     return time_took, unexpected_beh
 
 def evaluate():
@@ -46,20 +54,24 @@ def evaluate():
     # create a csv file
     with open(f'output/{directory_name}/evaluated.csv', 'w') as f:
         f.write("Visibility,Time,Unexpected_beh\n")
-    NUM_RUNS = 10
-    for visibility in [True, False]:
+    NUM_RUNS = 20
+    for visibility in [False, True]:
         for i in range(NUM_RUNS):
             print(f"\nVisibility: {visibility}, Run: {i+1}")
             x_start = (5.0, 5.0, math.pi/2)  # Starting node (x, y, yaw)
+            x_start = (2.0, 2.0, 0)  # Starting node (x, y, yaw)
+
             x_goal = (10.0, 3.0)  # Goal node
             if visibility:
                 path_saved = os.getcwd()+f"/output//{directory_name}/state_traj_vis_{i+1:03d}.npy"
             else:
                 path_saved = os.getcwd()+f"/output//{directory_name}/state_traj_ori_{i+1:03d}.npy"
-            gc.disable()
-            time_took, unexpected_beh = run(x_start, x_goal, visibility, path_saved)
-            gc.collect()
-            gc.enable()
+
+            # loop until the path is generated
+            while True:
+                time_took, unexpected_beh = run(x_start, x_goal, visibility, path_saved)
+                if unexpected_beh != -1:
+                    break
             print(f"Unexpected_beh: {unexpected_beh}, Time: {time_took}\n")
             # save the results with csv
             with open(f'output//{directory_name}/evaluated.csv', 'a') as f:
@@ -68,6 +80,7 @@ def evaluate():
     return f'output/{directory_name}/evaluated.csv'
 
 def plot(csv_path):
+    plt.clf()
     # Load the CSV file into a DataFrame
     df = pd.read_csv(csv_path, dtype={'Visibility': int, 'Time': float, 'Unexpected_beh': int})
 
@@ -80,20 +93,9 @@ def plot(csv_path):
     # Summarize results based on visibility
     summary = df_filtered.groupby(['Visibility', 'Result']).size().unstack(fill_value=0)
 
-    # Prepare data for plotting
-    time_success = df_filtered[df_filtered['Result'] == 'Success']['Time']
-    time_fail = df_filtered[df_filtered['Result'] == 'Fail']['Time']
 
-    fig, ax = plt.subplots(1, 2, figsize=(4, 6))
+    fig, ax = plt.subplots(1, 1, figsize=(4, 4))
 
-    # Plot 1: Time distribution for Success and Fail
-    ax[0].hist([time_success, time_fail], color=['green', 'red'], label=['Success', 'Fail'], bins=20, alpha=0.7)
-    ax[0].set_title('Time Distribution for Success and Fail Trials')
-    ax[0].set_xlabel('Time (s)')
-    ax[0].set_ylabel('Number of Trials')
-    ax[0].legend()
-
-    # Plot 2: Summary table as a bar chart
     summary.plot(kind='bar', ax=ax[1])
     ax[1].set_title('Trial Results by Visibility')
     ax[1].set_xlabel('Visibility')

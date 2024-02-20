@@ -9,7 +9,6 @@ from utils.node import Node
 from LQR_CBF_planning import LQR_CBF_Planner
 from tracking.cbf_qp_tracking import UnicyclePathFollower
 
-
 """
 Created on Jan 23, 2024
 # FIXME: write desciprtion
@@ -286,7 +285,7 @@ class LQRrrtStar:
 
 if __name__ == '__main__':
     SHOW_ANIMATION = True
-    x_start = (5.0, 5.0, math.pi/2)  # Starting node (x, y, yaw)
+    x_start = (2.0, 2.0, 0)  # Starting node (x, y, yaw)
     x_goal = (10.0, 18.0)  # Goal node
     x_goal = (10.0, 3.0)  # Goal node
 
@@ -295,9 +294,9 @@ if __name__ == '__main__':
                               max_rewiring_node_dist=2,
                               goal_sample_rate=0.1,
                               rewiring_radius=2,  
-                              iter_max=1000,
+                              iter_max=3000,
                               solve_QP=False,
-                              visibility=False,
+                              visibility=True,
                               show_animation=SHOW_ANIMATION)
     waypoints = lqr_rrt_star.planning()
 
