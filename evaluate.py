@@ -104,7 +104,7 @@ def following(path_saved):
 
 def evaluate(num_runs=10):
     # set the directory name for this evaluation, the name include the date and time
-    directory_name = time.strftime("%Y%m%d-%H%M%S")
+    directory_name = time.strftime("%y%m%d-%H%M")
     # make a directory if it is empty
     os.makedirs(f'output/{directory_name}')
     # create a csv file
@@ -133,10 +133,28 @@ def evaluate(num_runs=10):
             unexpected_beh = following(path_saved)
             print(f"Unexpected_beh: {unexpected_beh}, Time: {time_took}\n")
             # save the results with csv
-            with open(f'output//{directory_name}/evaluated.csv', 'a') as f:
+            with open(f'output/{directory_name}/evaluated.csv', 'a') as f:
                 f.write(f"{int(visibility)},{time_took},{unexpected_beh}\n")
 
     return f'output/{directory_name}/'
+
+def following_only(csv_path):
+    with open(f'{csv_path}/re-evaluated.csv', 'w') as f:
+        f.write("Visibility,Time,Unexpected_beh\n")
+    for visibility in [False, True]:
+        for i in range(2):
+            print(f"\nVisibility: {visibility}, Run: {i+1}")
+
+            if visibility:
+                path_saved = os.getcwd()+f"/{csv_path}/state_traj_vis_{i+1:03d}.npy"
+            else:
+                path_saved = os.getcwd()+f"/{csv_path}/state_traj_ori_{i+1:03d}.npy"
+
+            unexpected_beh = following(path_saved)
+            print(f"Unexpected_beh: {unexpected_beh}\n")
+            with open(f'{csv_path}/re-evaluated.csv', 'a') as f:
+                f.write(f"{int(visibility)},{unexpected_beh}\n")
+            
 
 def plot(csv_path):
     plt.clf()
@@ -169,7 +187,9 @@ def plot(csv_path):
     summary.reset_index()
 
 if __name__ == "__main__":
-    csv_path = evaluate(num_runs=2)
-    #plot(f'output/20240214-101358/evaluated.csv')
-    plot(csv_path)
-    plt.close()
+    # csv_path = evaluate(num_runs=2)
+    # plot(csv_path)
+    # plt.close()
+
+    csv_path = "output/20240225-020736"
+    following_only(csv_path)
