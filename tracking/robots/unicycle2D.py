@@ -183,33 +183,6 @@ class Unicycle2D:
             front_center = (self.X[0, 0] + braking_distance * np.cos(theta),
                             self.X[1, 0] + braking_distance * np.sin(theta))
             self.safety_area = LineString([Point(self.X[0, 0], self.X[1, 0]), Point(front_center)]).buffer(self.robot_radius)
-
-    # def update_safety_area(self):
-    #     theta = self.X[2, 0]
-    #     robot_position = (self.X[0, 0], self.X[1, 0])
-    #     v = self.U[0, 0]
-    #     braking_distance = v**2/(2*self.max_decel)
-
-    #     # Calculate front and back circle centers based on the braking distance
-    #     back_center = robot_position
-    #     front_center = (robot_position[0] + braking_distance * np.cos(theta),
-    #                     robot_position[1] + braking_distance * np.sin(theta))
-        
-    #     # Create circles at the front and back centers
-    #     back_circle = Point(back_center).buffer(self.robot_radius)
-    #     front_circle = Point(front_center).buffer(self.robot_radius)
-        
-    #     # Create the rectangle extending by braking_distance in the heading direction
-    #     rect_corners = [
-    #         (back_center[0] - self.robot_radius * np.sin(theta), back_center[1] + self.robot_radius * np.cos(theta)),
-    #         (back_center[0] + self.robot_radius * np.sin(theta), back_center[1] - self.robot_radius * np.cos(theta)),
-    #         (front_center[0] + self.robot_radius * np.sin(theta), front_center[1] - self.robot_radius * np.cos(theta)),
-    #         (front_center[0] - self.robot_radius * np.sin(theta), front_center[1] + self.robot_radius * np.cos(theta)),
-    #     ]
-    #     rectangle = Polygon(rect_corners)
-        
-    #     # Combine the shapes to form the capsule
-    #     self.safety_area = unary_union([back_circle, rectangle, front_circle])
     
     def is_beyond_frontier(self):
         return not self.frontier.contains(self.safety_area)
