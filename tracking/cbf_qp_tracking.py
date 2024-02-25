@@ -143,7 +143,7 @@ class UnicyclePathFollower:
         return unexpected_beh
 
 if __name__ == "__main__":
-    dt = 0.1
+    dt = 0.05
     alpha = 2.0
     tf = 100
     num_steps = int(tf/dt)

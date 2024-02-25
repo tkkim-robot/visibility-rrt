@@ -142,7 +142,7 @@ def following_only(csv_path):
     with open(f'{csv_path}/re-evaluated.csv', 'w') as f:
         f.write("Visibility,Time,Unexpected_beh\n")
     for visibility in [False, True]:
-        for i in range(2):
+        for i in range(10):
             print(f"\nVisibility: {visibility}, Run: {i+1}")
 
             if visibility:
