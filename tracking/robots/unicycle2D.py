@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import cvxpy as cp
 
-from shapely.geometry import Polygon, Point
+from shapely.geometry import Polygon, Point, LineString
 from shapely.ops import unary_union
 
 import sys
@@ -39,7 +39,8 @@ class Unicycle2D:
         self.cam_range = 3.0  # [m]
 
         self.robot_radius = 0.25 # including padding
-        self.max_decel = 1.0  # [m/s^2]
+        self.max_decel = 0.3  # [m/s^2]
+        self.max_ang_decel = 0.3  # [rad/s^2]
 
         self.U = np.array([0,0]).reshape(-1,1)
         
@@ -149,31 +150,66 @@ class Unicycle2D:
         #self.frontier = self.frontier.simplify(0.1)
 
     def update_safety_area(self):
-        theta = self.X[2, 0]
-        robot_position = (self.X[0, 0], self.X[1, 0])
-        v = self.U[0, 0]
-        braking_distance = v**2/(2*self.max_decel)
+        theta = self.X[2, 0]  # Current heading angle in radians
+        v = self.U[0, 0]  # Linear velocity
+        omega = self.U[1, 0]  # Angular velocity
+        
+        if omega != 0:
+            # Stopping times
+            t_stop_linear = v / self.max_decel
+            
+            # Calculate the trajectory
+            trajectory_points = [Point(self.X[0, 0], self.X[1, 0])]
+            t = 0  # Start time
+            while t <= t_stop_linear and v > 0:
+                v_current = max(v - self.max_decel * t, 0)
+                if v_current == 0:
+                    break  # Stop computing trajectory once v reaches 0
+                omega_current = omega - np.sign(omega) * self.max_ang_decel * t
+                if np.sign(omega_current) != np.sign(omega):  # If sign of omega changes, it has passed through 0
+                    omega_current = 0  
+                theta += omega_current * self.dt
+                x = trajectory_points[-1].x + v_current * np.cos(theta) * self.dt
+                y = trajectory_points[-1].y + v_current * np.sin(theta) * self.dt
+                trajectory_points.append(Point(x, y))
+                t += self.dt
 
-        # Calculate front and back circle centers based on the braking distance
-        back_center = robot_position
-        front_center = (robot_position[0] + braking_distance * np.cos(theta),
-                        robot_position[1] + braking_distance * np.sin(theta))
+            # Convert trajectory points to a LineString and buffer by robot radius
+            trajectory_line = LineString([(p.x, p.y) for p in trajectory_points])
+            self.safety_area = trajectory_line.buffer(self.robot_radius)
+        else:
+            braking_distance = v**2 / (2 * self.max_decel)  # Braking distance
+            # Straight motion
+            front_center = (self.X[0, 0] + braking_distance * np.cos(theta),
+                            self.X[1, 0] + braking_distance * np.sin(theta))
+            self.safety_area = LineString([Point(self.X[0, 0], self.X[1, 0]), Point(front_center)]).buffer(self.robot_radius)
+
+    # def update_safety_area(self):
+    #     theta = self.X[2, 0]
+    #     robot_position = (self.X[0, 0], self.X[1, 0])
+    #     v = self.U[0, 0]
+    #     braking_distance = v**2/(2*self.max_decel)
+
+    #     # Calculate front and back circle centers based on the braking distance
+    #     back_center = robot_position
+    #     front_center = (robot_position[0] + braking_distance * np.cos(theta),
+    #                     robot_position[1] + braking_distance * np.sin(theta))
         
-        # Create circles at the front and back centers
-        back_circle = Point(back_center).buffer(self.robot_radius)
-        front_circle = Point(front_center).buffer(self.robot_radius)
+    #     # Create circles at the front and back centers
+    #     back_circle = Point(back_center).buffer(self.robot_radius)
+    #     front_circle = Point(front_center).buffer(self.robot_radius)
         
-        # Create the rectangle extending by braking_distance in the heading direction
-        rect_corners = [
-            (back_center[0] - self.robot_radius * np.sin(theta), back_center[1] + self.robot_radius * np.cos(theta)),
-            (back_center[0] + self.robot_radius * np.sin(theta), back_center[1] - self.robot_radius * np.cos(theta)),
-            (front_center[0] + self.robot_radius * np.sin(theta), front_center[1] - self.robot_radius * np.cos(theta)),
-            (front_center[0] - self.robot_radius * np.sin(theta), front_center[1] + self.robot_radius * np.cos(theta)),
-        ]
-        rectangle = Polygon(rect_corners)
+    #     # Create the rectangle extending by braking_distance in the heading direction
+    #     rect_corners = [
+    #         (back_center[0] - self.robot_radius * np.sin(theta), back_center[1] + self.robot_radius * np.cos(theta)),
+    #         (back_center[0] + self.robot_radius * np.sin(theta), back_center[1] - self.robot_radius * np.cos(theta)),
+    #         (front_center[0] + self.robot_radius * np.sin(theta), front_center[1] - self.robot_radius * np.cos(theta)),
+    #         (front_center[0] - self.robot_radius * np.sin(theta), front_center[1] + self.robot_radius * np.cos(theta)),
+    #     ]
+    #     rectangle = Polygon(rect_corners)
         
-        # Combine the shapes to form the capsule
-        self.safety_area = unary_union([back_circle, rectangle, front_circle])
+    #     # Combine the shapes to form the capsule
+    #     self.safety_area = unary_union([back_circle, rectangle, front_circle])
     
     def is_beyond_frontier(self):
         return not self.frontier.contains(self.safety_area)

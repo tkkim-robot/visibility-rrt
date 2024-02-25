@@ -143,7 +143,7 @@ class UnicyclePathFollower:
         return unexpected_beh
 
 if __name__ == "__main__":
-    dt = 0.05
+    dt = 0.1
     alpha = 2.0
     tf = 100
     num_steps = int(tf/dt)
@@ -152,6 +152,7 @@ if __name__ == "__main__":
     path_to_continuous_waypoints = os.getcwd()+"/output/state_traj_vis_000.npy"
     path_to_continuous_waypoints = os.getcwd()+"/output/state_traj_vis_long.npy"
     path_to_continuous_waypoints = os.getcwd()+"/output/state_traj_ori_long.npy"
+    #path_to_continuous_waypoints = os.getcwd()+"/output/state_traj.npy"
     path_to_continuous_waypoints = os.getcwd()+"/output/20240219-205146/state_traj_ori_003.npy"
     waypoints = np.load(path_to_continuous_waypoints, allow_pickle=True)
     waypoints = np.array(waypoints, dtype=np.float64)
