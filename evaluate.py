@@ -77,8 +77,11 @@ def evaluate(num_runs=10):
         for i in range(num_runs):
             print(f"\nVisibility: {visibility}, Run: {i+1}")
 
+            # x_start = (2.0, 2.0, 0)  # Starting node (x, y, yaw)
+            # x_goal = (10.0, 3.0)  # Goal node
+            # type = 1 (large env)
             x_start = (2.0, 2.0, 0)  # Starting node (x, y, yaw)
-            x_goal = (10.0, 3.0)  # Goal node
+            x_goal = (25.0, 3.0)  # Goal node
             
             if visibility:
                 path_saved = os.getcwd()+f"/output//{directory_name}/state_traj_vis_{i+1:03d}.npy"
@@ -95,12 +98,12 @@ def evaluate(num_runs=10):
             with open(f'output//{directory_name}/evaluated.csv', 'a') as f:
                 f.write(f"{int(visibility)},{time_took},{unexpected_beh}\n")
 
-    return f'output/{directory_name}/evaluated.csv'
+    return f'output/{directory_name}/'
 
 def plot(csv_path):
     plt.clf()
     # Load the CSV file into a DataFrame
-    df = pd.read_csv(csv_path, dtype={'Visibility': int, 'Time': float, 'Unexpected_beh': int})
+    df = pd.read_csv(csv_path+'evaluated.csv', dtype={'Visibility': int, 'Time': float, 'Unexpected_beh': int})
 
     # Preprocess: Exclude trials where path was not generated (unexpected behavior is -1)
     df_filtered = df[df['Unexpected_beh'] != -1]
@@ -114,20 +117,21 @@ def plot(csv_path):
 
     fig, ax = plt.subplots(1, 1, figsize=(4, 4))
 
-    summary.plot(kind='bar', ax=ax[1])
-    ax[1].set_title('Trial Results by Visibility')
-    ax[1].set_xlabel('Visibility')
-    ax[1].set_ylabel('Number of Trials')
-    ax[1].set_xticklabels(['False', 'True'], rotation=0)
+    summary.plot(kind='bar', ax=ax)
+    ax.set_title('Trial Results by Visibility')
+    ax.set_xlabel('Visibility')
+    ax.set_ylabel('Number of Trials')
+    ax.set_xticklabels(['False', 'True'], rotation=0)
 
     plt.tight_layout()
+    plt.savefig(csv_path+"evaluate.PNG")
     plt.show()
 
     # Return DataFrame for further inspection if needed
     summary.reset_index()
 
 if __name__ == "__main__":
-    csv_path = evaluate(num_runs=10)
+    csv_path = evaluate(num_runs=1)
     #plot(f'output/20240214-101358/evaluated.csv')
     plot(csv_path)
     plt.close()
