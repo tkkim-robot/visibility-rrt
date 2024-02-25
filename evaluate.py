@@ -18,8 +18,10 @@ def planning_wrapper(lqr_rrt_star, result_queue):
 def run(x_start, x_goal, visibility, path_saved):
     if visibility:
         iter_max = 3000
+        iter_max = 4000
     else:
         iter_max = 1000
+        iter_max = 2000
     lqr_rrt_star = LQRrrtStar(x_start=x_start, x_goal=x_goal,
                               max_sampled_node_dist=1.0,
                               max_rewiring_node_dist=2,
@@ -30,13 +32,12 @@ def run(x_start, x_goal, visibility, path_saved):
                               visibility=visibility,
                               show_animation=False,
                               path_saved=path_saved)
-    t1 = time.time()
     # Use a Queue to receive the waypoints from the process
     result_queue = Queue()
     planning_process = Process(target=planning_wrapper, args=(lqr_rrt_star, result_queue))
     t1 = time.time()
     planning_process.start()
-    planning_process.join(timeout=15)
+    planning_process.join(timeout=50)
 
     if planning_process.is_alive():
         # If the process is still alive after the timeout, terminate it
@@ -53,6 +54,7 @@ def run(x_start, x_goal, visibility, path_saved):
         return time_took, -1
     x_init = waypoints[0]
     obs = np.array([0.5, 0.3, 0.1]).reshape(-1, 1) #FIXME: effectless in this case
+    print(len(waypoints), waypoints[-2])
     path_follower = UnicyclePathFollower('unicycle2d', obs, x_init, waypoints,
                                          alpha=2.0,
                                          show_obstacles=False,
@@ -77,11 +79,11 @@ def evaluate(num_runs=10):
         for i in range(num_runs):
             print(f"\nVisibility: {visibility}, Run: {i+1}")
 
-            # x_start = (2.0, 2.0, 0)  # Starting node (x, y, yaw)
-            # x_goal = (10.0, 3.0)  # Goal node
-            # type = 1 (large env)
             x_start = (2.0, 2.0, 0)  # Starting node (x, y, yaw)
-            x_goal = (25.0, 3.0)  # Goal node
+            x_goal = (10.0, 2.0)  # Goal node
+            # type = 1 (large env)
+            # x_start = (2.0, 2.0, 0)  # Starting node (x, y, yaw)
+            # x_goal = (25.0, 3.0)  # Goal node
             
             if visibility:
                 path_saved = os.getcwd()+f"/output//{directory_name}/state_traj_vis_{i+1:03d}.npy"
@@ -131,7 +133,7 @@ def plot(csv_path):
     summary.reset_index()
 
 if __name__ == "__main__":
-    csv_path = evaluate(num_runs=1)
+    csv_path = evaluate(num_runs=2)
     #plot(f'output/20240214-101358/evaluated.csv')
     plot(csv_path)
     plt.close()

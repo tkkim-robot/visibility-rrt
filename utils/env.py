@@ -1,5 +1,5 @@
 
-type = 1
+type = 2
 
 if type == 1:
     WIDTH = 35
@@ -10,7 +10,7 @@ if type == 2:
     WIDTH = 15
     HEIGHT = 15
     x_start = (2.0, 2.0, 0)  # Starting node (x, y, yaw)
-    x_goal = (10.0, 3.0)  # Goal node
+    x_goal = (10.0, 2.0)  # Goal node
 
 class Env:
     def __init__(self):

@@ -161,7 +161,7 @@ class Unicycle2D:
             # Calculate the trajectory
             trajectory_points = [Point(self.X[0, 0], self.X[1, 0])]
             t = 0  # Start time
-            while t <= t_stop_linear and v > 0:
+            while t <= t_stop_linear:
                 v_current = max(v - self.max_decel * t, 0)
                 if v_current == 0:
                     break  # Stop computing trajectory once v reaches 0
