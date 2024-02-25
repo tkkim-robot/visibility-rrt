@@ -76,10 +76,10 @@ def evaluate(num_runs=10):
     for visibility in [False, True]:
         for i in range(num_runs):
             print(f"\nVisibility: {visibility}, Run: {i+1}")
-            x_start = (5.0, 5.0, math.pi/2)  # Starting node (x, y, yaw)
-            x_start = (2.0, 2.0, 0)  # Starting node (x, y, yaw)
 
+            x_start = (2.0, 2.0, 0)  # Starting node (x, y, yaw)
             x_goal = (10.0, 3.0)  # Goal node
+            
             if visibility:
                 path_saved = os.getcwd()+f"/output//{directory_name}/state_traj_vis_{i+1:03d}.npy"
             else:
