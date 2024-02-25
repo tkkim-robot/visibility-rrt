@@ -175,8 +175,11 @@ class Unicycle2D:
                 t += self.dt
 
             # Convert trajectory points to a LineString and buffer by robot radius
-            trajectory_line = LineString([(p.x, p.y) for p in trajectory_points])
-            self.safety_area = trajectory_line.buffer(self.robot_radius)
+            if len(trajectory_points) >= 2:
+                trajectory_line = LineString([(p.x, p.y) for p in trajectory_points])
+                self.safety_area = trajectory_line.buffer(self.robot_radius)
+            else:
+                self.safety_area = Point(self.X[0, 0], self.X[1, 0]).buffer(self.robot_radius)
         else:
             braking_distance = v**2 / (2 * self.max_decel)  # Braking distance
             # Straight motion

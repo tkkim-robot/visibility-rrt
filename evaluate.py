@@ -32,6 +32,35 @@ def planning(x_start, x_goal, visibility, path_saved):
                               visibility=visibility,
                               show_animation=False,
                               path_saved=path_saved)
+    t1 = time.time()
+    waypoints = lqr_rrt_star.planning()
+    t2 = time.time()
+    time_took = t2-t1
+
+    del lqr_rrt_star
+    gc.collect()
+
+    if waypoints is None:
+        return time_took, 0
+    return time_took, 1
+
+def planning_with_timeout(x_start, x_goal, visibility, path_saved):
+    if visibility:
+        iter_max = 3000
+        iter_max = 4000
+    else:
+        iter_max = 1000
+        iter_max = 2000
+    lqr_rrt_star = LQRrrtStar(x_start=x_start, x_goal=x_goal,
+                              max_sampled_node_dist=1.0,
+                              max_rewiring_node_dist=2,
+                              goal_sample_rate=0.1,
+                              rewiring_radius=2,  
+                              iter_max=iter_max,
+                              solve_QP=False,
+                              visibility=visibility,
+                              show_animation=False,
+                              path_saved=path_saved)
     # Use a Queue to receive the waypoints from the process
     result_queue = Queue()
     planning_process = Process(target=planning_wrapper, args=(lqr_rrt_star, result_queue))
@@ -92,9 +121,9 @@ def evaluate(num_runs=10):
             # x_goal = (25.0, 3.0)  # Goal node
             
             if visibility:
-                path_saved = os.getcwd()+f"/output//{directory_name}/state_traj_vis_{i+1:03d}.npy"
+                path_saved = os.getcwd()+f"/output/{directory_name}/state_traj_vis_{i+1:03d}.npy"
             else:
-                path_saved = os.getcwd()+f"/output//{directory_name}/state_traj_ori_{i+1:03d}.npy"
+                path_saved = os.getcwd()+f"/output/{directory_name}/state_traj_ori_{i+1:03d}.npy"
 
             # loop until the path is generated
             while True:
@@ -140,7 +169,7 @@ def plot(csv_path):
     summary.reset_index()
 
 if __name__ == "__main__":
-    csv_path = evaluate(num_runs=10)
+    csv_path = evaluate(num_runs=2)
     #plot(f'output/20240214-101358/evaluated.csv')
     plot(csv_path)
     plt.close()

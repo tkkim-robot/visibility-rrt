@@ -81,7 +81,11 @@ class Visibility_CBF:
                 return True
 
             dist = math.hypot(x-xc, y-yc)
-            tt_reach = dist/v # time to reach the critical point
+            dist = max(0.0001, dist) # dist should be greater than 0
+            if v != 0:
+                tt_reach = dist/v # time to reach the critical point
+            else:
+                tt_reach = float('inf')
 
             # Unicycle with velocity control
             h = tt_reach - tt_rot

@@ -295,7 +295,7 @@ if __name__ == '__main__':
                               max_rewiring_node_dist=2,
                               goal_sample_rate=0.1,
                               rewiring_radius=2,  
-                              iter_max=3000,
+                              iter_max=4000,
                               solve_QP=False,
                               visibility=True,
                               show_animation=SHOW_ANIMATION)
