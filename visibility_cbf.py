@@ -69,6 +69,7 @@ class Visibility_CBF:
 
             # temporal variable
             z = math.cos(theta)*math.cos(thetac) + math.sin(theta)*math.sin(thetac)
+            z = max(-1, min(z, 1)) # Ensure z is within the valid range of -1 to 1
             dtheta = math.acos(z) - self.fov/2
             dtheta = max(0, dtheta) # dtheta should be greater than 0
             # assume self.w_upper_lim is positive and self.w_lower_lim is -1 * self.w_upper_lim
