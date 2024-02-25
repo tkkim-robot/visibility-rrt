@@ -1,4 +1,3 @@
-import math
 import numpy as np
 import os
 import time
@@ -9,12 +8,14 @@ from LQR_CBF_rrtStar import LQRrrtStar
 from tracking.cbf_qp_tracking import UnicyclePathFollower
 
 import gc
+import stopit
 from multiprocessing import Process, Queue
 
 def planning_wrapper(lqr_rrt_star, result_queue):
     waypoints = lqr_rrt_star.planning()
     result_queue.put(waypoints)  # Use a queue to safely return data from the process
 
+@stopit.threading_timeoutable(default=0)
 def planning(x_start, x_goal, visibility, path_saved):
     if visibility:
         iter_max = 3000
@@ -41,50 +42,8 @@ def planning(x_start, x_goal, visibility, path_saved):
     gc.collect()
 
     if waypoints is None:
-        return time_took, 0
-    return time_took, 1
-
-def planning_with_timeout(x_start, x_goal, visibility, path_saved):
-    if visibility:
-        iter_max = 3000
-        iter_max = 4000
-    else:
-        iter_max = 1000
-        iter_max = 2000
-    lqr_rrt_star = LQRrrtStar(x_start=x_start, x_goal=x_goal,
-                              max_sampled_node_dist=1.0,
-                              max_rewiring_node_dist=2,
-                              goal_sample_rate=0.1,
-                              rewiring_radius=2,  
-                              iter_max=iter_max,
-                              solve_QP=False,
-                              visibility=visibility,
-                              show_animation=False,
-                              path_saved=path_saved)
-    # Use a Queue to receive the waypoints from the process
-    result_queue = Queue()
-    planning_process = Process(target=planning_wrapper, args=(lqr_rrt_star, result_queue))
-    t1 = time.time()
-    planning_process.start()
-    planning_process.join(timeout=50)
-
-    if planning_process.is_alive():
-        # If the process is still alive after the timeout, terminate it
-        planning_process.terminate()
-        planning_process.join()  # Make sure the process has terminated
-        print("Planning process was terminated due to timeout.")
-        waypoints = None
-    else:
-        waypoints = result_queue.get() if not result_queue.empty() else None
-    t2 = time.time()
-    time_took = t2-t1
-
-    del lqr_rrt_star
-    gc.collect()
-
-    if waypoints is None:
-        return time_took, -1
-    return time_took, 1
+        return 0
+    return time_took
 
 def following(path_saved):
     waypoints = np.load(path_saved)
@@ -127,8 +86,9 @@ def evaluate(num_runs=10):
 
             # loop until the path is generated
             while True:
-                time_took, flag = planning(x_start, x_goal, visibility, path_saved)
-                if flag:
+                time_took = planning(x_start, x_goal, visibility, path_saved, timeout=50)
+                # fonud a path
+                if time_took != 0:
                     break
             unexpected_beh = following(path_saved)
             print(f"Unexpected_beh: {unexpected_beh}, Time: {time_took}\n")
@@ -187,9 +147,9 @@ def plot(csv_path):
     summary.reset_index()
 
 if __name__ == "__main__":
-    # csv_path = evaluate(num_runs=2)
-    # plot(csv_path)
-    # plt.close()
+    csv_path = evaluate(num_runs=10)
+    plot(csv_path)
+    plt.close()
 
-    csv_path = "output/20240225-020736"
-    following_only(csv_path)
+    # csv_path = "output/20240225-020736"
+    # following_only(csv_path)
