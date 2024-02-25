@@ -36,7 +36,7 @@ class Unicycle2D:
 
         # FOV parameters
         self.fov_angle = np.deg2rad(70)  # [rad]
-        self.cam_range = 3.0  # [m]
+        self.cam_range = 3.5  # [m]
 
         self.robot_radius = 0.25 # including padding
         self.max_decel = 0.3  # [m/s^2]

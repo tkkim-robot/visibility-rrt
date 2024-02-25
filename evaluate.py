@@ -15,7 +15,7 @@ def planning_wrapper(lqr_rrt_star, result_queue):
     waypoints = lqr_rrt_star.planning()
     result_queue.put(waypoints)  # Use a queue to safely return data from the process
 
-def run(x_start, x_goal, visibility, path_saved):
+def planning(x_start, x_goal, visibility, path_saved):
     if visibility:
         iter_max = 3000
         iter_max = 4000
@@ -50,22 +50,28 @@ def run(x_start, x_goal, visibility, path_saved):
     t2 = time.time()
     time_took = t2-t1
 
+    del lqr_rrt_star
+    gc.collect()
+
     if waypoints is None:
         return time_took, -1
+    return time_took, 1
+
+def following(path_saved):
+    waypoints = np.load(path_saved)
     x_init = waypoints[0]
     obs = np.array([0.5, 0.3, 0.1]).reshape(-1, 1) #FIXME: effectless in this case
-    print(len(waypoints), waypoints[-2])
+    print("Waypoints information, length: ", len(waypoints), waypoints[-2])
     path_follower = UnicyclePathFollower('unicycle2d', obs, x_init, waypoints,
                                          alpha=2.0,
                                          show_obstacles=False,
                                          show_animation=False)
     unexpected_beh = path_follower.run(save_animation=False)
 
-    del lqr_rrt_star
     del path_follower
     gc.collect()
 
-    return time_took, unexpected_beh
+    return unexpected_beh
 
 def evaluate(num_runs=10):
     # set the directory name for this evaluation, the name include the date and time
@@ -92,9 +98,10 @@ def evaluate(num_runs=10):
 
             # loop until the path is generated
             while True:
-                time_took, unexpected_beh = run(x_start, x_goal, visibility, path_saved)
-                if unexpected_beh != -1:
+                time_took, flag = planning(x_start, x_goal, visibility, path_saved)
+                if flag:
                     break
+            unexpected_beh = following(path_saved)
             print(f"Unexpected_beh: {unexpected_beh}, Time: {time_took}\n")
             # save the results with csv
             with open(f'output//{directory_name}/evaluated.csv', 'a') as f:
@@ -133,7 +140,7 @@ def plot(csv_path):
     summary.reset_index()
 
 if __name__ == "__main__":
-    csv_path = evaluate(num_runs=2)
+    csv_path = evaluate(num_runs=10)
     #plot(f'output/20240214-101358/evaluated.csv')
     plot(csv_path)
     plt.close()

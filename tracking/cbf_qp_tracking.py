@@ -154,6 +154,7 @@ if __name__ == "__main__":
     path_to_continuous_waypoints = os.getcwd()+"/output/state_traj_ori_long.npy"
     #path_to_continuous_waypoints = os.getcwd()+"/output/state_traj.npy"
     path_to_continuous_waypoints = os.getcwd()+"/output/20240219-205146/state_traj_ori_003.npy"
+    path_to_continuous_waypoints = os.getcwd()+"/output/20240225-011647/state_traj_vis_002.npy"
     waypoints = np.load(path_to_continuous_waypoints, allow_pickle=True)
     waypoints = np.array(waypoints, dtype=np.float64)
     x_init = waypoints[0]
