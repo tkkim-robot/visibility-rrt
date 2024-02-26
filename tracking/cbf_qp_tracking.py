@@ -74,6 +74,7 @@ class UnicyclePathFollower:
         print("Start following the generated path.")
         unexpected_beh = 0
 
+        ani_idx = 0
         for i in range(int(self.tf / self.dt)):
             if self.goal_reached(self.robot.X, np.array(self.waypoints[self.current_goal_index]).reshape(-1, 1)):
                 self.current_goal_index += 1
@@ -121,7 +122,8 @@ class UnicyclePathFollower:
                     if not os.path.exists(current_directory_path + "/output/animations"):
                         os.makedirs(current_directory_path + "/output/animations")
                     plt.savefig(current_directory_path +
-                                "/output/animations/" + "t_step_" + str(i) + ".png")
+                                "/output/animations/" + "t_step_" + str(ani_idx) + ".png")
+                    ani_idx += 1
 
         if self.show_animation and save_animation:
             subprocess.call(['ffmpeg',
