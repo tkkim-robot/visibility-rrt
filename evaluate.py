@@ -101,8 +101,12 @@ def evaluate(num_runs=10):
 def following_only(csv_path):
     with open(f'{csv_path}/re-evaluated.csv', 'w') as f:
         f.write("Visibility,Time,Unexpected_beh\n")
-    for visibility in [False, True]:
-        for i in range(10):
+    for visibility in [True, False]:
+        visibility_df = pd.read_csv(f'{csv_path}/evaluated.csv')
+        visibility_df = visibility_df[visibility_df['Visibility'] == int(visibility)]
+        visibility_times = visibility_df['Time'].values.tolist()
+        
+        for i, time_val in enumerate(visibility_times):
             print(f"\nVisibility: {visibility}, Run: {i+1}")
 
             if visibility:
@@ -113,7 +117,7 @@ def following_only(csv_path):
             unexpected_beh = following(path_saved)
             print(f"Unexpected_beh: {unexpected_beh}\n")
             with open(f'{csv_path}/re-evaluated.csv', 'a') as f:
-                f.write(f"{int(visibility)},{unexpected_beh}\n")
+                f.write(f"{int(visibility)},{time_val},{unexpected_beh}\n")
             
 
 def plot(csv_path, csv_name="evaluated.csv"):
@@ -142,12 +146,6 @@ def plot(csv_path, csv_name="evaluated.csv"):
     ax1.set_ylabel('Number of Trials')
     ax1.set_xticklabels(['False', 'True'], rotation=0)
 
-    # Calculate mean, variance, third quantile, and first quantile of time
-    mean_time = df_filtered.groupby('Visibility')['Time'].mean()
-    var_time = df_filtered.groupby('Visibility')['Time'].var()
-    third_quantile = df_filtered.groupby('Visibility')['Time'].quantile(0.75)
-    first_quantile = df_filtered.groupby('Visibility')['Time'].quantile(0.25)
-
     # Plot the mean, variance, third quantile, and first quantile of time using a violin plot in the second subplot
     ax2.violinplot(dataset=[df_filtered[df_filtered['Visibility'] == False]['Time'], df_filtered[df_filtered['Visibility'] == True]['Time']],
                    positions=[0, 1], showmeans=True)
@@ -167,8 +165,8 @@ def plot(csv_path, csv_name="evaluated.csv"):
 if __name__ == "__main__":
     #csv_path = evaluate(num_runs=10)
     #plot(csv_path)
-    plot("", "type2.csv")
-    plt.close()
+    # plot("", "type2.csv")
+    # plt.close()
 
-    # csv_path = "output/20240225-020736"
-    # following_only(csv_path)
+    csv_path = "output/240225-0430"
+    following_only(csv_path)
