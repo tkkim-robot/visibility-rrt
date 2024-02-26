@@ -116,39 +116,58 @@ def following_only(csv_path):
                 f.write(f"{int(visibility)},{unexpected_beh}\n")
             
 
-def plot(csv_path):
+def plot(csv_path, csv_name="evaluated.csv"):
     plt.clf()
+    plt.close()  # Close the first figure
+
     # Load the CSV file into a DataFrame
-    df = pd.read_csv(csv_path+'evaluated.csv', dtype={'Visibility': int, 'Time': float, 'Unexpected_beh': int})
+    df = pd.read_csv(csv_path+csv_name, dtype={'Visibility': int, 'Time': float, 'Unexpected_beh': int})
 
     # Preprocess: Exclude trials where path was not generated (unexpected behavior is -1)
     df_filtered = df[df['Unexpected_beh'] != -1]
 
     # Classify the results into 'Fail' or 'Success'
-    df_filtered['Result'] = df_filtered['Unexpected_beh'].apply(lambda x: 'Fail' if x > 0 else 'Success')
+    df_filtered['Result'] = df_filtered['Unexpected_beh'].apply(lambda x: 'Fail' if x > 10 else 'Success')
 
     # Summarize results based on visibility
-    summary = df_filtered.groupby(['Visibility', 'Result']).size().unstack(fill_value=0)
+    summary = df_filtered[df_filtered['Result'] == 'Success'].groupby('Visibility').size()
 
+    # Create a subplot with two subplots
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 8))
 
-    fig, ax = plt.subplots(1, 1, figsize=(4, 4))
+    # Plot the current contents in the first subplot
+    summary.plot(kind='bar', ax=ax1)
+    ax1.set_title('Success Rate by Visibility')
+    ax1.set_xlabel('Visibility')
+    ax1.set_ylabel('Number of Trials')
+    ax1.set_xticklabels(['False', 'True'], rotation=0)
 
-    summary.plot(kind='bar', ax=ax)
-    ax.set_title('Trial Results by Visibility')
-    ax.set_xlabel('Visibility')
-    ax.set_ylabel('Number of Trials')
-    ax.set_xticklabels(['False', 'True'], rotation=0)
+    # Calculate mean, variance, third quantile, and first quantile of time
+    mean_time = df_filtered.groupby('Visibility')['Time'].mean()
+    var_time = df_filtered.groupby('Visibility')['Time'].var()
+    third_quantile = df_filtered.groupby('Visibility')['Time'].quantile(0.75)
+    first_quantile = df_filtered.groupby('Visibility')['Time'].quantile(0.25)
+
+    # Plot the mean, variance, third quantile, and first quantile of time using a violin plot in the second subplot
+    ax2.violinplot(dataset=[df_filtered[df_filtered['Visibility'] == False]['Time'], df_filtered[df_filtered['Visibility'] == True]['Time']],
+                   positions=[0, 1], showmeans=True)
+    ax2.set_title('Mean, Variance, Third Quantile, and First Quantile of Time by Visibility')
+    ax2.set_xlabel('Visibility')
+    ax2.set_ylabel('Time')
+    ax2.set_xticks([0, 1])
+    ax2.set_xticklabels(['False', 'True'], rotation=0)
 
     plt.tight_layout()
     plt.savefig(csv_path+"evaluate.PNG")
-    plt.show()
+    plt.show()  # Plot the second figure
 
     # Return DataFrame for further inspection if needed
     summary.reset_index()
 
 if __name__ == "__main__":
-    csv_path = evaluate(num_runs=10)
-    plot(csv_path)
+    #csv_path = evaluate(num_runs=10)
+    #plot(csv_path)
+    plot("", "type2.csv")
     plt.close()
 
     # csv_path = "output/20240225-020736"
