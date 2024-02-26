@@ -113,8 +113,10 @@ class LQR_CBF_Planner:
             # FIXME: critical point should be more general
             # FIXME: first, let's try to just give the new_node, and modify the distance a little bit shorter
             #(for t_reach to be make sense), treat it as xc
-            MAX_DIST_CRITICAL = 5.0 # [m]
-            MAX_DIST_CRITICAL = math.cos(math.pi/2 - self.visibility_cbf.fov/2) * 3 # 3 is range of the sensor
+            #MAX_DIST_CRITICAL = 5.0 # [m]
+            cam_range = self.visibility_cbf.cam_range
+
+            MAX_DIST_CRITICAL = math.cos(math.pi/2 - self.visibility_cbf.fov/2) * cam_range # 3 is range of the sensor
             dist_to_critical = math.hypot(gx-rx[-1], gy-ry[-1])
             dist_to_critical = min(dist_to_critical, MAX_DIST_CRITICAL)
             cx = rx[-1] + dist_to_critical * math.cos(gtheta)
@@ -158,16 +160,16 @@ class LQR_CBF_Planner:
                 plt.plot([robot_position[0], yaw_line_end[0]], [robot_position[1], yaw_line_end[1]], 'g-')
 
                 # Calculate and draw the FOV
-                fov_left, fov_right = calculate_fov_points(robot_position, yaw, fov_angle=self.visibility_cbf.fov, cam_range=3)
+                fov_left, fov_right = calculate_fov_points(robot_position, yaw, fov_angle=self.visibility_cbf.fov, cam_range=cam_range)
                 fov_lines.append(plt.plot([robot_position[0], fov_left[0]], [robot_position[1], fov_left[1]], 'k-')[0])
                 fov_lines.append(plt.plot([robot_position[0], fov_right[0]], [robot_position[1], fov_right[1]], 'k-')[0])
                 fov_lines.append(plt.plot([fov_left[0], fov_right[0]], [fov_left[1], fov_right[1]], 'k-')[0])
 
                 # Calculate FOV points at the start position 
-                fov_left_init, fov_right_init = calculate_fov_points((rx[0], ry[0]), gtheta, fov_angle=self.visibility_cbf.fov, cam_range=3)
+                fov_left_init, fov_right_init = calculate_fov_points((rx[0], ry[0]), gtheta, fov_angle=self.visibility_cbf.fov, cam_range=cam_range)
 
                 # Calculate FOV points at the current position
-                current_fov_left, current_fov_right = calculate_fov_points(robot_position, gtheta, fov_angle=self.visibility_cbf.fov, cam_range=3)
+                current_fov_left, current_fov_right = calculate_fov_points(robot_position, gtheta, fov_angle=self.visibility_cbf.fov, cam_range=cam_range)
 
                 # Draw dashed lines for the FOV boundaries
                 fov_lines.append(plt.plot([fov_left_init[0], current_fov_left[0]], [fov_left_init[1], current_fov_left[1]], 'k--', alpha=0.5)[0])

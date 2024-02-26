@@ -5,7 +5,7 @@ import os
 import glob
 import subprocess
 class UnicyclePathFollower:
-    def __init__(self, robot, obs, X0, waypoints, alpha, dt=0.05, tf=100, show_obstacles=True):
+    def __init__(self, robot, obs, X0, waypoints, alpha, dt=0.05, tf=100, show_obstacles=False, show_animation=False):
         self.robot = robot
         self.obs = obs
         self.waypoints = waypoints
@@ -14,28 +14,32 @@ class UnicyclePathFollower:
         self.tf = tf
 
         self.current_goal_index = 0  # Index of the current goal in the path
-        self.reached_threshold = 0.6
-        self.unexpected_beh = 0
+        self.reached_threshold = 0.5
 
-        self.v_max = 1.5
-        self.w_max = 1.0
+        self.v_max = 1.0
+        self.w_max = 0.5
 
-        # Initialize plotting
-        plt.ion()
-        self.fig = plt.figure()
-        self.ax = plt.axes()
-        #self.fig, self.ax = plt.subplots()
-        # self.ax.set_xlim((-0.5, 2))
-        # self.ax.set_ylim((-0.5, 2))
-        self.ax.set_xlabel("X")
-        self.ax.set_ylabel("Y")
-        self.ax.set_aspect(1)
+        self.show_animation = show_animation
 
-        # Visualize goal and obstacles
-        self.ax.scatter(waypoints[:, 0], waypoints[:, 1], c='g')
-        if show_obstacles:
-            circ = plt.Circle((obs[0,0], obs[1,0]), obs[2,0], linewidth=1, edgecolor='k', facecolor='k')
-            self.ax.add_patch(circ)
+        if show_animation:
+            # Initialize plotting
+            plt.ion()
+            self.fig = plt.figure()
+            self.ax = plt.axes()
+            #self.fig, self.ax = plt.subplots()
+            # self.ax.set_xlim((-0.5, 2))
+            # self.ax.set_ylim((-0.5, 2))
+            self.ax.set_xlabel("X")
+            self.ax.set_ylabel("Y")
+            self.ax.set_aspect(1)
+
+            # Visualize goal and obstacles
+            self.ax.scatter(waypoints[:, 0], waypoints[:, 1], c='g')
+            if show_obstacles:
+                circ = plt.Circle((obs[0,0], obs[1,0]), obs[2,0], linewidth=1, edgecolor='k', facecolor='k')
+                self.ax.add_patch(circ)
+        else:
+            self.ax = plt.axes() # dummy placeholder
 
         # Setup control problem
         self.setup_robot(X0)
@@ -65,6 +69,11 @@ class UnicyclePathFollower:
 
 
     def run(self, save_animation=False):
+        print("===================================")
+        print("============  CBF-QP  =============")
+        print("Start following the generated path.")
+        unexpected_beh = 0
+
         for i in range(int(self.tf / self.dt)):
             if self.goal_reached(self.robot.X, np.array(self.waypoints[self.current_goal_index]).reshape(-1, 1)):
                 self.current_goal_index += 1
@@ -86,33 +95,35 @@ class UnicyclePathFollower:
 
             if self.cbf_controller.status != 'optimal':
                 print("ERROR in QP")
+                unexpected_beh = -1 # reutn with error
                 break
 
-            #print(f"control input: {self.u.value.T}, h:{h}")
             self.robot.step(self.u.value)
-            self.robot.render_plot()
+            if self.show_animation:
+                self.robot.render_plot()
 
             # update FOV
             self.robot.update_frontier()
             self.robot.update_safety_area()
-            if i > int(3.0 / self.dt):
-                flag = self.robot.is_beyond_frontier()
-                self.unexpected_beh += flag
-                if flag:
-                    print("Cumulative unexpected behavior: {}".format(self.unexpected_beh))
+            if i > int(5.0 / self.dt): # exclude the first 5 seconds
+                beyond_flag = self.robot.is_beyond_frontier()
+                unexpected_beh += beyond_flag
+                if beyond_flag and self.show_animation:
+                    print("Cumulative unexpected behavior: {}".format(unexpected_beh))
 
-            self.fig.canvas.draw()
-            self.fig.canvas.flush_events()
-            plt.pause(0.01)
+            if self.show_animation:
+                self.fig.canvas.draw()
+                self.fig.canvas.flush_events()
+                plt.pause(0.01)
 
-            if save_animation:
-                current_directory_path = os.getcwd() 
-                if not os.path.exists(current_directory_path + "/output/animations"):
-                    os.makedirs(current_directory_path + "/output/animations")
-                plt.savefig(current_directory_path +
-                            "/output/animations/" + "t_step_" + str(i) + ".png")
+                if save_animation:
+                    current_directory_path = os.getcwd() 
+                    if not os.path.exists(current_directory_path + "/output/animations"):
+                        os.makedirs(current_directory_path + "/output/animations")
+                    plt.savefig(current_directory_path +
+                                "/output/animations/" + "t_step_" + str(i) + ".png")
 
-        if save_animation:
+        if self.show_animation and save_animation:
             subprocess.call(['ffmpeg',
                             '-i', current_directory_path+"/output/animations/" + "/t_step_%01d.png",
                             '-r', '60',  # Changes the output FPS to 30
@@ -123,24 +134,36 @@ class UnicyclePathFollower:
                             "/output/animations/*.png"):
                 os.remove(file_name)
 
-        print("Simulation finished")
-        plt.ioff()
-        #plt.show()
-        plt.close()
+        print("=====   Simulation finished  =====")
+        print("===================================\n")
+        if self.show_animation:
+            plt.ioff()
+            plt.close()
 
-# Assuming Unicycle2D is defined in the same file or imported
+        return unexpected_beh
+
 if __name__ == "__main__":
     dt = 0.05
     alpha = 2.0
     tf = 100
     num_steps = int(tf/dt)
 
-    path_to_continuous_waypoints = os.getcwd()+"/output/state_traj_ori_1.npy"
+    path_to_continuous_waypoints = os.getcwd()+"/output/state_traj_ori_000.npy"
+    path_to_continuous_waypoints = os.getcwd()+"/output/state_traj_vis_000.npy"
+    path_to_continuous_waypoints = os.getcwd()+"/output/state_traj_vis_long.npy"
+    path_to_continuous_waypoints = os.getcwd()+"/output/state_traj_ori_long.npy"
+    #path_to_continuous_waypoints = os.getcwd()+"/output/state_traj.npy"
+    path_to_continuous_waypoints = os.getcwd()+"/output/20240219-205146/state_traj_ori_003.npy"
+    path_to_continuous_waypoints = os.getcwd()+"/output/20240225-011647/state_traj_vis_002.npy"
     waypoints = np.load(path_to_continuous_waypoints, allow_pickle=True)
     waypoints = np.array(waypoints, dtype=np.float64)
+
+    print(waypoints[-1])
     x_init = waypoints[0]
 
     obs = np.array([0.8, 10.5, 0.2]).reshape(-1, 1)
     #goal = np.array([1, 1])
-    path_follower = UnicyclePathFollower('unicycle2d', obs, x_init, waypoints,  alpha, dt, tf, show_obstacles=False)
-    path_follower.run(save_animation=True)
+    path_follower = UnicyclePathFollower('unicycle2d', obs, x_init, waypoints,  alpha, dt, tf, 
+                                         show_obstacles=False,
+                                         show_animation=True)
+    unexpected_beh = path_follower.run(save_animation=False)

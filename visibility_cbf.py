@@ -30,10 +30,11 @@ class Visibility_CBF:
         self.k1_unicyle_cbf = 3 # CBF coefficient for h(x)
 
         # robot attributes
-        self.fov = 60 * (math.pi/180) # field of view
-        self.w_lower_lim = -1.0
-        self.w_upper_lim = 1.0
-        self.unicycle_constant_v = 1.5
+        self.fov = 70 * (math.pi/180) # field of view
+        self.cam_range = 3.0 # camera range
+        self.w_lower_lim = -0.5
+        self.w_upper_lim = 0.5
+        self.unicycle_constant_v = 1.0
 
     def set_initial_state(self, initial_state):
         self.init_state = np.array(initial_state)
@@ -68,6 +69,7 @@ class Visibility_CBF:
 
             # temporal variable
             z = math.cos(theta)*math.cos(thetac) + math.sin(theta)*math.sin(thetac)
+            z = max(-1, min(z, 1)) # Ensure z is within the valid range of -1 to 1
             dtheta = math.acos(z) - self.fov/2
             dtheta = max(0, dtheta) # dtheta should be greater than 0
             # assume self.w_upper_lim is positive and self.w_lower_lim is -1 * self.w_upper_lim
@@ -80,7 +82,11 @@ class Visibility_CBF:
                 return True
 
             dist = math.hypot(x-xc, y-yc)
-            tt_reach = dist/v # time to reach the critical point
+            dist = max(0.0001, dist) # dist should be greater than 0
+            if v != 0:
+                tt_reach = dist/v # time to reach the critical point
+            else:
+                tt_reach = float('inf')
 
             # Unicycle with velocity control
             h = tt_reach - tt_rot

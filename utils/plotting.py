@@ -21,7 +21,7 @@ class Plotting:
     def animation(self, nodelist, path, name, animation=False):
         self.plot_grid(name)
         self.plot_visited(nodelist, animation)
-        self.plot_path_fov(path, math.pi/4, 3)
+        self.plot_path_fov(path, cam_range=3.5)
         self.plot_path(path)
 
     def animation_online(self, nodelist, name, animation=False):
@@ -121,7 +121,7 @@ class Plotting:
         plt.show()
 
     @staticmethod
-    def plot_path_fov(path, fov_angle, cam_range):
+    def plot_path_fov(path, cam_range):
 
         path = np.array(path)
         width = linewidth_from_data_units(cam_range/math.sqrt(2), plt.gca(), reference='y')
