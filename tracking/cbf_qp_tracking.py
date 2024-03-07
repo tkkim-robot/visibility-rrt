@@ -74,6 +74,7 @@ class UnicyclePathFollower:
         print("Start following the generated path.")
         unexpected_beh = 0
 
+        ani_idx = 0
         for i in range(int(self.tf / self.dt)):
             if self.goal_reached(self.robot.X, np.array(self.waypoints[self.current_goal_index]).reshape(-1, 1)):
                 self.current_goal_index += 1
@@ -116,12 +117,13 @@ class UnicyclePathFollower:
                 self.fig.canvas.flush_events()
                 plt.pause(0.01)
 
-                if save_animation:
+                if save_animation and i%2==0:
                     current_directory_path = os.getcwd() 
                     if not os.path.exists(current_directory_path + "/output/animations"):
                         os.makedirs(current_directory_path + "/output/animations")
                     plt.savefig(current_directory_path +
-                                "/output/animations/" + "t_step_" + str(i) + ".png")
+                                "/output/animations/" + "t_step_" + str(ani_idx) + ".png")
+                    ani_idx += 1
 
         if self.show_animation and save_animation:
             subprocess.call(['ffmpeg',
@@ -151,10 +153,7 @@ if __name__ == "__main__":
     path_to_continuous_waypoints = os.getcwd()+"/output/state_traj_ori_000.npy"
     path_to_continuous_waypoints = os.getcwd()+"/output/state_traj_vis_000.npy"
     path_to_continuous_waypoints = os.getcwd()+"/output/state_traj_vis_long.npy"
-    path_to_continuous_waypoints = os.getcwd()+"/output/state_traj_ori_long.npy"
-    #path_to_continuous_waypoints = os.getcwd()+"/output/state_traj.npy"
-    path_to_continuous_waypoints = os.getcwd()+"/output/20240219-205146/state_traj_ori_003.npy"
-    path_to_continuous_waypoints = os.getcwd()+"/output/20240225-011647/state_traj_vis_002.npy"
+    path_to_continuous_waypoints = os.getcwd()+"/output/240225-0430/state_traj_vis_011.npy"
     waypoints = np.load(path_to_continuous_waypoints, allow_pickle=True)
     waypoints = np.array(waypoints, dtype=np.float64)
 

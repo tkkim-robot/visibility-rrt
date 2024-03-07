@@ -48,6 +48,9 @@ class Unicycle2D:
         self.vis_orient_len = 0.3
         # Robot's body represented as a scatter plot
         self.body = ax.scatter([],[],s=60,facecolors='b',edgecolors='b') #facecolors='none'
+        # Store the unsafe points and scatter plot
+        self.unsafe_points = []
+        self.unsafe_points_handle = ax.scatter([],[],s=40,facecolors='r',edgecolors='r')
         # Robot's orientation axis represented as a line
         self.axis,  = ax.plot([self.X[0,0],self.X[0,0]+self.vis_orient_len*np.cos(self.X[2,0])],[self.X[1,0],self.X[1,0]+self.vis_orient_len*np.sin(self.X[2,0])], color='r')
         # Initialize FOV line handle with placeholder data
@@ -58,7 +61,8 @@ class Unicycle2D:
         self.safety_area_fill = ax.fill([], [], 'r', alpha=0.3)[0]  
         self.frontier = Polygon() # preserve the union of all the FOV triangles
         self.safety_area = Polygon() # preserve the union of all the safety areas
-        self.render_plot()
+        self.positions = []  # List to store the positions for plotting
+    
 
     def f(self):
         return np.array([0,0,0]).reshape(-1,1)
@@ -78,6 +82,8 @@ class Unicycle2D:
         x = np.array([self.X[0,0],self.X[1,0],self.X[2,0]])
         #self.body._offsets3d = ([[x[0]],[x[1]],[x[2]]])
         self.body.set_offsets([x[0], x[1]])
+        if len(self.unsafe_points) > 0:
+            self.unsafe_points_handle.set_offsets(np.array(self.unsafe_points))
         
         self.axis.set_ydata([self.X[1,0],self.X[1,0]+self.vis_orient_len*np.sin(self.X[2,0])])
         self.axis.set_xdata( [self.X[0,0],self.X[0,0]+self.vis_orient_len*np.cos(self.X[2,0])] )
@@ -188,7 +194,10 @@ class Unicycle2D:
             self.safety_area = LineString([Point(self.X[0, 0], self.X[1, 0]), Point(front_center)]).buffer(self.robot_radius)
     
     def is_beyond_frontier(self):
-        return not self.frontier.contains(self.safety_area)
+        flag = not self.frontier.contains(self.safety_area)
+        if flag:
+            self.unsafe_points.append((self.X[0, 0], self.X[1, 0]))
+        return flag
     
     def calculate_fov_points(self):
         """
