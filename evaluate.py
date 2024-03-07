@@ -46,7 +46,10 @@ def planning(x_start, x_goal, visibility, path_saved):
     return time_took
 
 def following(path_saved):
-    waypoints = np.load(path_saved)
+    try:
+        waypoints = np.load(path_saved)
+    except:
+        return -1
     x_init = waypoints[0]
     obs = np.array([0.5, 0.3, 0.1]).reshape(-1, 1) #FIXME: effectless in this case
     print("Waypoints information, length: ", len(waypoints), waypoints[-2])
@@ -115,6 +118,8 @@ def following_only(csv_path):
                 path_saved = os.getcwd()+f"/{csv_path}/state_traj_ori_{i+1:03d}.npy"
 
             unexpected_beh = following(path_saved)
+            if unexpected_beh == -1:
+                continue
             print(f"Unexpected_beh: {unexpected_beh}\n")
             with open(f'{csv_path}/re-evaluated.csv', 'a') as f:
                 f.write(f"{int(visibility)},{time_val},{unexpected_beh}\n")
@@ -131,7 +136,7 @@ def plot(csv_path, csv_name="evaluated.csv"):
     df_filtered = df[df['Unexpected_beh'] != -1]
 
     # Classify the results into 'Fail' or 'Success'
-    df_filtered['Result'] = df_filtered['Unexpected_beh'].apply(lambda x: 'Fail' if x > 10 else 'Success')
+    df_filtered['Result'] = df_filtered['Unexpected_beh'].apply(lambda x: 'Fail' if x > 5 else 'Success')
 
     # Summarize results based on visibility
     summary = df_filtered[df_filtered['Result'] == 'Success'].groupby('Visibility').size()
@@ -145,6 +150,10 @@ def plot(csv_path, csv_name="evaluated.csv"):
     ax1.set_xlabel('Visibility')
     ax1.set_ylabel('Number of Trials')
     ax1.set_xticklabels(['False', 'True'], rotation=0)
+
+    # Add labels on top of each bar
+    for i, v in enumerate(summary.values):
+        ax1.text(i, v, str(v), ha='center', va='bottom')
 
     # Plot the mean, variance, third quantile, and first quantile of time using a violin plot in the second subplot
     ax2.violinplot(dataset=[df_filtered[df_filtered['Visibility'] == False]['Time'], df_filtered[df_filtered['Visibility'] == True]['Time']],
@@ -170,3 +179,5 @@ if __name__ == "__main__":
 
     csv_path = "output/240225-0430"
     following_only(csv_path)
+    plot("output/240225-0430/", "re-evaluated.csv")
+    plt.close()
