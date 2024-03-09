@@ -55,7 +55,6 @@ def following(path_saved):
     print("Waypoints information, length: ", len(waypoints), waypoints[-2])
     path_follower = UnicyclePathFollower('unicycle2d', obs, x_init, waypoints,
                                          alpha=2.0,
-                                         show_obstacles=False,
                                          show_animation=False)
     unexpected_beh = path_follower.run(save_animation=False)
 

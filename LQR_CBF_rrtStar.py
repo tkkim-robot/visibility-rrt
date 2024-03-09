@@ -295,9 +295,9 @@ if __name__ == '__main__':
                               max_rewiring_node_dist=2,
                               goal_sample_rate=0.1,
                               rewiring_radius=2,  
-                              iter_max=4000,
+                              iter_max=2000,
                               solve_QP=False,
-                              visibility=True,
+                              visibility=False,
                               show_animation=SHOW_ANIMATION)
     waypoints = lqr_rrt_star.planning()
 
@@ -305,6 +305,6 @@ if __name__ == '__main__':
     obs = np.array([0.5, 0.3, 0.1]).reshape(-1, 1) #FIXME: effectless in this case
     alpha = 2.0
     path_follower = UnicyclePathFollower('unicycle2d', obs, x_init, waypoints,  alpha,
-                                         show_obstacles=False,
-                                         show_animation=SHOW_ANIMATION)
+                                         show_animation=SHOW_ANIMATION,
+                                         plotting=lqr_rrt_star.plotting)
     unexpected_beh = path_follower.run(save_animation=False)
