@@ -55,13 +55,14 @@ def following(path_saved):
     x_goal = waypoints[-1]
 
     plot_handler = plotting.Plotting(x_init, x_goal)
+    env_handler = env.Env()
 
     print("Waypoints information, length: ", len(waypoints), waypoints[-2])
     path_follower = UnicyclePathFollower('unicycle2d', x_init, waypoints,
                                          alpha=2.0,
                                          show_animation=False,
                                          plotting=plot_handler,
-                                         env=env.Env())
+                                         env=env_handler)
     unexpected_beh, early_violation = path_follower.run(save_animation=False)
 
     del path_follower

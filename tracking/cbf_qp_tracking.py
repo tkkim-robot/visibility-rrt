@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 import cvxpy as cp
 import os
 import glob
@@ -22,6 +23,7 @@ class UnicyclePathFollower:
         self.show_animation = show_animation
         self.plotting = plotting
         self.obs = np.array(env.obs_circle)
+        self.unknown_obs = None
 
         if show_animation:
             # Initialize plotting
@@ -67,11 +69,30 @@ class UnicyclePathFollower:
     def goal_reached(self, current_position, goal_position):
         return np.linalg.norm(current_position[:2] - goal_position[:2]) < self.reached_threshold
 
-    def nearest_obs(self):
-        radius = self.obs[:, 2]
-        distances = np.linalg.norm(self.obs[:, :2] - self.robot.X[:2].T, axis=1)
+    def set_unknown_obs(self, unknown_obs):
+        # set initially
+        self.unknown_obs = unknown_obs
+        for (ox, oy, r) in self.unknown_obs :
+            self.ax.add_patch(
+                patches.Circle(
+                    (ox, oy), r,
+                    edgecolor='black',
+                    facecolor='orange',
+                    fill=True
+                )
+            )
+
+    def get_nearest_obs(self, detected_obs):
+        # if there was new obstacle detected, update the obs
+        if len(detected_obs) != 0:
+            all_obs = np.vstack((self.obs, detected_obs))
+        else:
+            all_obs = self.obs
+
+        radius = all_obs[:, 2]
+        distances = np.linalg.norm(all_obs[:, :2] - self.robot.X[:2].T, axis=1)
         min_distance_index = np.argmin(distances-radius)
-        nearest_obstacle = self.obs[min_distance_index]
+        nearest_obstacle = all_obs[min_distance_index]
         return nearest_obstacle.reshape(-1, 1)
 
 
@@ -96,7 +117,8 @@ class UnicyclePathFollower:
 
             goal = np.array(self.waypoints[self.current_goal_index][0:2]) # set goal to next waypoint's (x,y)
 
-            nearest_obs = self.nearest_obs()
+            detected_obs = self.robot.detect_unknown_obs(self.unknown_obs)
+            nearest_obs = self.get_nearest_obs(detected_obs)
             h, dh_dx = self.robot.agent_barrier(nearest_obs)
             self.u_ref.value = self.robot.nominal_input(goal)
             self.A1.value = dh_dx @ self.robot.g()
@@ -170,7 +192,7 @@ if __name__ == "__main__":
     path_to_continuous_waypoints = os.getcwd()+"/output/state_traj_ori_000.npy"
     path_to_continuous_waypoints = os.getcwd()+"/output/state_traj_vis_000.npy"
     path_to_continuous_waypoints = os.getcwd()+"/output/state_traj_vis_long.npy"
-    path_to_continuous_waypoints = os.getcwd()+"/output/240225-0430/state_traj_ori_021.npy"
+    path_to_continuous_waypoints = os.getcwd()+"/output/240225-0430/state_traj_vis_021.npy"
     waypoints = np.load(path_to_continuous_waypoints, allow_pickle=True)
     waypoints = np.array(waypoints, dtype=np.float64)
 
@@ -179,9 +201,24 @@ if __name__ == "__main__":
     x_goal = waypoints[-1]
 
     plot_handler = plotting.Plotting(x_init, x_goal)
+    env_handler = env.Env()
 
     path_follower = UnicyclePathFollower('unicycle2d', x_init, waypoints,  alpha, dt, tf, 
                                          show_animation=True,
                                          plotting=plot_handler,
-                                         env=env.Env())
+                                         env=env_handler)
+    
+    # randomly generate 5 unknown obstacles
+    x_range = env_handler.x_range
+    y_range = env_handler.y_range
+    unknown_obs = np.random.uniform(low=[x_range[0], y_range[0], 0], high=[x_range[1], y_range[1], 0], size=(20, 3))
+    unknown_obs[:, 2] = 0.5
+    unknown_obs = np.vstack((unknown_obs, [
+                        [10, 8, 0.5],
+                        [10.5, 8, 0.5],
+                        [11, 8, 0.5]])
+    )
+
+                        
+    path_follower.set_unknown_obs(unknown_obs)
     unexpected_beh = path_follower.run(save_animation=False)

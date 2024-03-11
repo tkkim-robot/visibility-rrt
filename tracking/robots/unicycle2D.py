@@ -205,6 +205,16 @@ class Unicycle2D:
             self.unsafe_points.append((self.X[0, 0], self.X[1, 0]))
         return flag
     
+    def detect_unknown_obs(self, unknown_obs):
+        if unknown_obs is None:
+            return []
+        detected_obs = []
+        for obs in unknown_obs:
+            obs_circle = Point(obs[0], obs[1]).buffer(obs[2]-0.4)
+            if self.frontier.intersects(obs_circle):
+                detected_obs.append(obs)
+        return detected_obs
+    
     def calculate_fov_points(self):
         """
         Calculate the left and right boundary points of the robot's FOV.
