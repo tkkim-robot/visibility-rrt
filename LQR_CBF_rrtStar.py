@@ -302,9 +302,9 @@ if __name__ == '__main__':
     waypoints = lqr_rrt_star.planning()
 
     x_init = waypoints[0]
-    obs = np.array([0.5, 0.3, 0.1]).reshape(-1, 1) #FIXME: effectless in this case
     alpha = 2.0
-    path_follower = UnicyclePathFollower('unicycle2d', obs, x_init, waypoints,  alpha,
+    path_follower = UnicyclePathFollower('unicycle2d', x_init, waypoints,  alpha,
                                          show_animation=SHOW_ANIMATION,
-                                         plotting=lqr_rrt_star.plotting)
+                                         plotting=lqr_rrt_star.plotting,
+                                         env=lqr_rrt_star.env)
     unexpected_beh = path_follower.run(save_animation=False)

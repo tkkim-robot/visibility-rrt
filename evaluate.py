@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 
 from LQR_CBF_rrtStar import LQRrrtStar
 from tracking.cbf_qp_tracking import UnicyclePathFollower
+from utils import env, plotting
 
 import gc
 import stopit
@@ -51,11 +52,17 @@ def following(path_saved):
     except:
         return -1
     x_init = waypoints[0]
-    obs = np.array([0.5, 0.3, 0.1]).reshape(-1, 1) #FIXME: effectless in this case
+    x_goal = waypoints[-1]
+
+    plot_handler = plotting.Plotting(x_init, x_goal)
+    env_handler = env.Env()
+
     print("Waypoints information, length: ", len(waypoints), waypoints[-2])
-    path_follower = UnicyclePathFollower('unicycle2d', obs, x_init, waypoints,
+    path_follower = UnicyclePathFollower('unicycle2d', x_init, waypoints,
                                          alpha=2.0,
-                                         show_animation=False)
+                                         show_animation=False,
+                                         plotting=plot_handler,
+                                         env=env_handler)
     unexpected_beh, early_violation = path_follower.run(save_animation=False)
 
     del path_follower
@@ -189,6 +196,6 @@ if __name__ == "__main__":
     # plt.close()
 
     csv_path = "output/240225-0430"
-    #following_only(csv_path)
+    following_only(csv_path)
     plot("output/240225-0430/", "re-evaluated.csv")
     plt.close()
