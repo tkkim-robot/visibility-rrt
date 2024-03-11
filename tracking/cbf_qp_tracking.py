@@ -179,7 +179,7 @@ class UnicyclePathFollower:
 
 if __name__ == "__main__":
     dt = 0.05
-    alpha = 2.0
+    alpha = 1.0
     tf = 100
     num_steps = int(tf/dt)
     import sys
@@ -192,7 +192,7 @@ if __name__ == "__main__":
     path_to_continuous_waypoints = os.getcwd()+"/output/state_traj_ori_000.npy"
     path_to_continuous_waypoints = os.getcwd()+"/output/state_traj_vis_000.npy"
     path_to_continuous_waypoints = os.getcwd()+"/output/state_traj_vis_long.npy"
-    path_to_continuous_waypoints = os.getcwd()+"/output/240225-0430/state_traj_vis_021.npy"
+    path_to_continuous_waypoints = os.getcwd()+"/output/240225-0430/state_traj_ori_018.npy"
     waypoints = np.load(path_to_continuous_waypoints, allow_pickle=True)
     waypoints = np.array(waypoints, dtype=np.float64)
 
@@ -211,14 +211,13 @@ if __name__ == "__main__":
     # randomly generate 5 unknown obstacles
     x_range = env_handler.x_range
     y_range = env_handler.y_range
-    unknown_obs = np.random.uniform(low=[x_range[0], y_range[0], 0], high=[x_range[1], y_range[1], 0], size=(20, 3))
-    unknown_obs[:, 2] = 0.5
-    unknown_obs = np.vstack((unknown_obs, [
-                        [10, 8, 0.5],
-                        [10.5, 8, 0.5],
-                        [11, 8, 0.5]])
-    )
-
-                        
-    path_follower.set_unknown_obs(unknown_obs)
+    # unknown_obs = np.random.uniform(low=[x_range[0], y_range[0], 0], high=[x_range[1], y_range[1], 0], size=(20, 3))
+    # unknown_obs[:, 2] = 0.5
+    # unknown_obs = np.vstack((unknown_obs, [
+    #                     [10, 8, 0.5],
+    #                     [10.5, 8, 0.5],
+    #                     [11, 8, 0.5]])
+    # )
+    unknown_obs = np.array([[10, 7.5, 0.5]])
+    #path_follower.set_unknown_obs(unknown_obs)
     unexpected_beh = path_follower.run(save_animation=False)

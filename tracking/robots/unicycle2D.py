@@ -210,7 +210,7 @@ class Unicycle2D:
             return []
         detected_obs = []
         for obs in unknown_obs:
-            obs_circle = Point(obs[0], obs[1]).buffer(obs[2]-0.4)
+            obs_circle = Point(obs[0], obs[1]).buffer(obs[2])
             if self.frontier.intersects(obs_circle):
                 detected_obs.append(obs)
         return detected_obs
