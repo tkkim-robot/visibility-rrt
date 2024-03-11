@@ -56,12 +56,12 @@ def following(path_saved):
     path_follower = UnicyclePathFollower('unicycle2d', obs, x_init, waypoints,
                                          alpha=2.0,
                                          show_animation=False)
-    unexpected_beh = path_follower.run(save_animation=False)
+    unexpected_beh, early_violation = path_follower.run(save_animation=False)
 
     del path_follower
     gc.collect()
 
-    return unexpected_beh
+    return unexpected_beh, early_violation
 
 def evaluate(num_runs=10):
     # set the directory name for this evaluation, the name include the date and time
@@ -70,7 +70,7 @@ def evaluate(num_runs=10):
     os.makedirs(f'output/{directory_name}')
     # create a csv file
     with open(f'output/{directory_name}/evaluated.csv', 'w') as f:
-        f.write("Visibility,Time,Unexpected_beh\n")
+        f.write("Visibility,Time,Unexpected_beh,Early_Violation\n")
     for visibility in [False, True]:
         for i in range(num_runs):
             print(f"\nVisibility: {visibility}, Run: {i+1}")
@@ -92,17 +92,17 @@ def evaluate(num_runs=10):
                 # fonud a path
                 if time_took != 0:
                     break
-            unexpected_beh = following(path_saved)
-            print(f"Unexpected_beh: {unexpected_beh}, Time: {time_took}\n")
+            unexpected_beh, early_violation = following(path_saved)
+            print(f"Unexpected_beh: {unexpected_beh}, Early Violation: {early_violation}, Time: {time_took}\n")
             # save the results with csv
             with open(f'output/{directory_name}/evaluated.csv', 'a') as f:
-                f.write(f"{int(visibility)},{time_took},{unexpected_beh}\n")
+                f.write(f"{int(visibility)},{time_took},{unexpected_beh},{early_violation}\n")
 
     return f'output/{directory_name}/'
 
 def following_only(csv_path):
     with open(f'{csv_path}/re-evaluated.csv', 'w') as f:
-        f.write("Visibility,Time,Unexpected_beh\n")
+        f.write("Visibility,Time,Unexpected_beh,Early_Violation\n")
     for visibility in [True, False]:
         visibility_df = pd.read_csv(f'{csv_path}/evaluated.csv')
         visibility_df = visibility_df[visibility_df['Visibility'] == int(visibility)]
@@ -116,12 +116,12 @@ def following_only(csv_path):
             else:
                 path_saved = os.getcwd()+f"/{csv_path}/state_traj_ori_{i+1:03d}.npy"
 
-            unexpected_beh = following(path_saved)
+            unexpected_beh, early_violation = following(path_saved)
             if unexpected_beh == -1:
                 continue
-            print(f"Unexpected_beh: {unexpected_beh}\n")
+            print(f"Unexpected_beh: {unexpected_beh}, Early Violation: {early_violation}\n")
             with open(f'{csv_path}/re-evaluated.csv', 'a') as f:
-                f.write(f"{int(visibility)},{time_val},{unexpected_beh}\n")
+                f.write(f"{int(visibility)},{time_val},{unexpected_beh},{early_violation}\n")
             
 
 def plot(csv_path, csv_name="evaluated.csv"):
@@ -129,46 +129,58 @@ def plot(csv_path, csv_name="evaluated.csv"):
     plt.close()  # Close the first figure
 
     # Load the CSV file into a DataFrame
-    df = pd.read_csv(csv_path+csv_name, dtype={'Visibility': int, 'Time': float, 'Unexpected_beh': int})
+    df = pd.read_csv(csv_path+csv_name, dtype={'Visibility': int, 'Time': float, 'Unexpected_beh': int, 'Early_Violation': int})
 
     # Preprocess: Exclude trials where path was not generated (unexpected behavior is -1)
     df_filtered = df[df['Unexpected_beh'] != -1]
 
     # Classify the results into 'Fail' or 'Success'
-    df_filtered['Result'] = df_filtered['Unexpected_beh'].apply(lambda x: 'Fail' if x > 5 else 'Success')
+    df_filtered['Result'] = df_filtered['Unexpected_beh'].apply(lambda x: 'Fail' if x > 0 else 'Success')
 
     # Summarize results based on visibility
-    summary = df_filtered[df_filtered['Result'] == 'Success'].groupby('Visibility').size()
+    success_summary = df_filtered[df_filtered['Result'] == 'Success'].groupby('Visibility').size()
+    violation_summary = df_filtered[df_filtered['Early_Violation'] > 0].groupby('Visibility').size()
 
     # Create a subplot with two subplots
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 8))
+    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(8, 8))
 
-    # Plot the current contents in the first subplot
-    summary.plot(kind='bar', ax=ax1)
+    # Plot the success rate in the first subplot
+    success_summary.plot(kind='bar', ax=ax1)
     ax1.set_title('Success Rate by Visibility')
     ax1.set_xlabel('Visibility')
     ax1.set_ylabel('Number of Trials')
     ax1.set_xticklabels(['False', 'True'], rotation=0)
 
     # Add labels on top of each bar
-    for i, v in enumerate(summary.values):
+    for i, v in enumerate(success_summary.values):
         ax1.text(i, v, str(v), ha='center', va='bottom')
 
-    # Plot the mean, variance, third quantile, and first quantile of time using a violin plot in the second subplot
-    ax2.violinplot(dataset=[df_filtered[df_filtered['Visibility'] == False]['Time'], df_filtered[df_filtered['Visibility'] == True]['Time']],
-                   positions=[0, 1], showmeans=True)
-    ax2.set_title('Mean, Variance, Third Quantile, and First Quantile of Time by Visibility')
+    # Plot the early violation rate in the second subplot
+    violation_summary.plot(kind='bar', ax=ax2)
+    ax2.set_title('Early Violation Rate by Visibility')
     ax2.set_xlabel('Visibility')
-    ax2.set_ylabel('Time')
-    ax2.set_xticks([0, 1])
+    ax2.set_ylabel('Number of Trials')
     ax2.set_xticklabels(['False', 'True'], rotation=0)
+
+    # Add labels on top of each bar
+    for i, v in enumerate(violation_summary.values):
+        ax2.text(i, v, str(v), ha='center', va='bottom')
+
+    # Plot the mean, variance, third quantile, and first quantile of time using a violin plot in the second subplot
+    ax3.violinplot(dataset=[df_filtered[df_filtered['Visibility'] == False]['Time'], df_filtered[df_filtered['Visibility'] == True]['Time']],
+                   positions=[0, 1], showmeans=True)
+    ax3.set_title('Mean, Variance, Third Quantile, and First Quantile of Time by Visibility')
+    ax3.set_xlabel('Visibility')
+    ax3.set_ylabel('Time')
+    ax3.set_xticks([0, 1])
+    ax3.set_xticklabels(['False', 'True'], rotation=0)
 
     plt.tight_layout()
     plt.savefig(csv_path+"evaluate.PNG")
     plt.show()  # Plot the second figure
 
     # Return DataFrame for further inspection if needed
-    summary.reset_index()
+    #summary.reset_index()
 
 if __name__ == "__main__":
     #csv_path = evaluate(num_runs=10)
@@ -177,6 +189,6 @@ if __name__ == "__main__":
     # plt.close()
 
     csv_path = "output/240225-0430"
-    following_only(csv_path)
+    #following_only(csv_path)
     plot("output/240225-0430/", "re-evaluated.csv")
     plt.close()

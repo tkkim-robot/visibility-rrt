@@ -39,7 +39,7 @@ class Unicycle2D:
         self.cam_range = 3.0  # [m]
 
         self.robot_radius = 0.25 # including padding
-        self.max_decel = 0.25  # [m/s^2]
+        self.max_decel = 0.4  # [m/s^2]
         self.max_ang_decel = 0.25  # [rad/s^2]
 
         self.U = np.array([0,0]).reshape(-1,1)
@@ -111,8 +111,8 @@ class Unicycle2D:
     
     def nominal_input(self, G, d_min = 0.05):
         G = np.copy(G.reshape(-1,1))
-        k_v = 1.5 #0.5 #0.5
-        k_omega = 2.5 #2.0 #0.5#2.5
+        k_v = 1.0 # 1.5 #0.5
+        k_omega = 2.0 #2.5 #2.0 
         distance = max(np.linalg.norm( self.X[0:2,0]-G[0:2,0] ) - d_min, 0.05) #1.5)
         theta_d = np.arctan2(G[1,0]-self.X[1,0],G[0,0]-self.X[0,0])
         error_theta = angle_normalize( theta_d - self.X[2,0] )
