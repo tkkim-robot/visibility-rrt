@@ -31,15 +31,15 @@ class Unicycle2D:
         self.dt = dt
       
         # for exp 
-        self.k1 = 1.0
-        self.k2 = 0.5
+        self.k1 = 0.5 #=#1.0
+        self.k2 = 1.8 #0.5
 
         # FOV parameters
         self.fov_angle = np.deg2rad(70)  # [rad]
         self.cam_range = 3.0  # [m]
 
         self.robot_radius = 0.25 # including padding
-        self.max_decel = 0.25  # [m/s^2]
+        self.max_decel = 0.4  # [m/s^2]
         self.max_ang_decel = 0.25  # [rad/s^2]
 
         self.U = np.array([0,0]).reshape(-1,1)
@@ -111,9 +111,9 @@ class Unicycle2D:
     
     def nominal_input(self, G, d_min = 0.05):
         G = np.copy(G.reshape(-1,1))
-        k_v = 0.5 #0.5
-        k_omega = 2.0 #0.5#2.5
-        distance = max(np.linalg.norm( self.X[0:2,0]-G[0:2,0] ) - d_min, 1.5)
+        k_v = 1.0 # 1.5 #0.5
+        k_omega = 2.0 #2.5 #2.0 
+        distance = max(np.linalg.norm( self.X[0:2,0]-G[0:2,0] ) - d_min, 0.05) #1.5)
         theta_d = np.arctan2(G[1,0]-self.X[1,0],G[0,0]-self.X[0,0])
         error_theta = angle_normalize( theta_d - self.X[2,0] )
 
@@ -138,13 +138,22 @@ class Unicycle2D:
 
         beta = 1.01
         theta = self.X[2,0]
+
+        # if np.linalg.norm( self.X[0:2] - obsX[0:2] ) > 0.3:
+        #     obsX = obsX.copy() * 10
         
         h = np.linalg.norm( self.X[0:2] - obsX[0:2] )**2 - beta*d_min**2   
         s = ( self.X[0:2] - obsX[0:2]).T @ np.array( [np.cos(theta),np.sin(theta)] ).reshape(-1,1)
         h = h - self.sigma(s)
         
         der_sigma = self.sigma_der(s)
-        dh_dx = np.append( 2*( self.X[0:2] - obsX[0:2] ).T - der_sigma * ( np.array([ [np.cos(theta), np.sin(theta)] ]) ),  - der_sigma * ( -np.sin(theta)*( self.X[0,0]-obsX[0,0] ) + np.cos(theta)*( self.X[1,0] - obsX[1,0] ) ) , axis=1)
+        # [dh/dx, dh/dy, dh/dtheta]^T
+        dh_dx = np.append( 
+                    2*( self.X[0:2] - obsX[0:2] ).T - der_sigma * ( np.array([ [np.cos(theta), np.sin(theta)] ]) ),
+                    - der_sigma * ( -np.sin(theta)*( self.X[0,0]-obsX[0,0] ) + np.cos(theta)*( self.X[1,0] - obsX[1,0] ) ),
+                     axis=1)
+        # print(h)
+        # print(dh_dx)
         return h, dh_dx
     
     def update_frontier(self):
@@ -222,12 +231,12 @@ if __name__ == "__main__":
     ax.set_ylabel("Y")
     ax.set_aspect(1)
 
-    dt = 0.05
+    dt = 0.02
     tf = 20
     num_steps = int(tf/dt)
     robot = Unicycle2D( np.array([-1,-1,np.pi/4]).reshape(-1,1), dt, ax )
-    obs = np.array([0.5, 0.3, 0.1]).reshape(-1,1)
-    goal = np.array([1,1])
+    obs = np.array([0.5, 0.3, 0.5]).reshape(-1,1)
+    goal = np.array([2,0.5])
     ax.scatter(goal[0], goal[1], c='g')
     circ = plt.Circle((obs[0,0],obs[1,0]),obs[2,0],linewidth = 1, edgecolor='k',facecolor='k')
     ax.add_patch(circ)
@@ -240,7 +249,7 @@ if __name__ == "__main__":
     objective = cp.Minimize( cp.sum_squares( u - u_ref ) ) 
     const = [A1 @ u + b1 >= 0]
     alpha = 5.0 #10.0
-    const += [ cp.abs( u[0,0] ) <= 1.5 ]
+    const += [ cp.abs( u[0,0] ) <= 1.0 ]
     const += [ cp.abs( u[1,0] ) <= 0.5 ]
     cbf_controller = cp.Problem( objective, const )
 
@@ -248,6 +257,7 @@ if __name__ == "__main__":
         
         h, dh_dx = robot.agent_barrier( obs)
         u_ref.value = robot.nominal_input( goal )
+        print(u_ref.value)
         A1.value[0,:] = dh_dx @ robot.g()
         b1.value[0,:] = dh_dx @ robot.f() + alpha * h
         cbf_controller.solve(solver=cp.GUROBI, reoptimize=True)

@@ -5,7 +5,7 @@ import os
 import glob
 import subprocess
 class UnicyclePathFollower:
-    def __init__(self, robot, obs, X0, waypoints, alpha, dt=0.05, tf=100, show_obstacles=False, show_animation=False):
+    def __init__(self, robot, obs, X0, waypoints, alpha, dt=0.05, tf=100, show_animation=False, plotting=None):
         self.robot = robot
         self.obs = obs
         self.waypoints = waypoints
@@ -14,30 +14,29 @@ class UnicyclePathFollower:
         self.tf = tf
 
         self.current_goal_index = 0  # Index of the current goal in the path
-        self.reached_threshold = 0.5
+        self.reached_threshold = 1.0
 
         self.v_max = 1.0
         self.w_max = 0.5
 
         self.show_animation = show_animation
+        self.plotting = plotting
 
         if show_animation:
             # Initialize plotting
+            if self.plotting is None:
+                self.fig = plt.figure()
+                self.ax = plt.axes()
+            else:
+                # plot the obstacles
+                self.ax, self.fig = self.plotting.plot_grid("Path Following")
             plt.ion()
-            self.fig = plt.figure()
-            self.ax = plt.axes()
-            #self.fig, self.ax = plt.subplots()
-            # self.ax.set_xlim((-0.5, 2))
-            # self.ax.set_ylim((-0.5, 2))
             self.ax.set_xlabel("X")
             self.ax.set_ylabel("Y")
             self.ax.set_aspect(1)
 
             # Visualize goal and obstacles
-            self.ax.scatter(waypoints[:, 0], waypoints[:, 1], c='g')
-            if show_obstacles:
-                circ = plt.Circle((obs[0,0], obs[1,0]), obs[2,0], linewidth=1, edgecolor='k', facecolor='k')
-                self.ax.add_patch(circ)
+            self.ax.scatter(waypoints[:, 0], waypoints[:, 1], c='g', s=10)
         else:
             self.ax = plt.axes() # dummy placeholder
 
@@ -72,6 +71,7 @@ class UnicyclePathFollower:
         print("===================================")
         print("============  CBF-QP  =============")
         print("Start following the generated path.")
+        early_violation = 0
         unexpected_beh = 0
 
         ani_idx = 0
@@ -106,8 +106,10 @@ class UnicyclePathFollower:
             # update FOV
             self.robot.update_frontier()
             self.robot.update_safety_area()
-            if i > int(5.0 / self.dt): # exclude the first 5 seconds
+            if i > int(1.0 / self.dt): # exclude the first 1 seconds
                 beyond_flag = self.robot.is_beyond_frontier()
+                if i < int(5.0 / self.dt):
+                    early_violation += beyond_flag
                 unexpected_beh += beyond_flag
                 if beyond_flag and self.show_animation:
                     print("Cumulative unexpected behavior: {}".format(unexpected_beh))
@@ -142,27 +144,35 @@ class UnicyclePathFollower:
             plt.ioff()
             plt.close()
 
-        return unexpected_beh
+        return unexpected_beh, early_violation
 
 if __name__ == "__main__":
     dt = 0.05
     alpha = 2.0
     tf = 100
     num_steps = int(tf/dt)
+    import sys
+    import os
+    sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+
+    from utils import plotting
 
     path_to_continuous_waypoints = os.getcwd()+"/output/state_traj_ori_000.npy"
     path_to_continuous_waypoints = os.getcwd()+"/output/state_traj_vis_000.npy"
     path_to_continuous_waypoints = os.getcwd()+"/output/state_traj_vis_long.npy"
-    path_to_continuous_waypoints = os.getcwd()+"/output/240225-0430/state_traj_vis_011.npy"
+    path_to_continuous_waypoints = os.getcwd()+"/output/240225-0430/state_traj_ori_021.npy"
     waypoints = np.load(path_to_continuous_waypoints, allow_pickle=True)
     waypoints = np.array(waypoints, dtype=np.float64)
 
     print(waypoints[-1])
     x_init = waypoints[0]
+    x_goal = waypoints[-1]
+
+    plot_handler = plotting.Plotting(x_init, x_goal)
 
     obs = np.array([0.8, 10.5, 0.2]).reshape(-1, 1)
     #goal = np.array([1, 1])
     path_follower = UnicyclePathFollower('unicycle2d', obs, x_init, waypoints,  alpha, dt, tf, 
-                                         show_obstacles=False,
-                                         show_animation=True)
+                                         show_animation=True,
+                                         plotting=plot_handler)
     unexpected_beh = path_follower.run(save_animation=False)
