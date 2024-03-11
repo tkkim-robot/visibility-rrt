@@ -5,9 +5,6 @@ import cvxpy as cp
 from shapely.geometry import Polygon, Point, LineString
 from shapely.ops import unary_union
 
-import sys
-# at trackin_mpc/robots/unicycle2D.py, import utils/utils.py
-sys.path.append('..')
 
 
 def angle_normalize(x):

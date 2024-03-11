@@ -5,9 +5,9 @@ import os
 import glob
 import subprocess
 class UnicyclePathFollower:
-    def __init__(self, robot, obs, X0, waypoints, alpha, dt=0.05, tf=100, show_animation=False, plotting=None):
+    def __init__(self, robot, X0, waypoints, alpha, dt=0.05, tf=100,
+                  show_animation=False, plotting=None, env=None):
         self.robot = robot
-        self.obs = obs
         self.waypoints = waypoints
         self.alpha = alpha
         self.dt = dt
@@ -21,6 +21,7 @@ class UnicyclePathFollower:
 
         self.show_animation = show_animation
         self.plotting = plotting
+        self.obs = np.array(env.obs_circle)
 
         if show_animation:
             # Initialize plotting
@@ -66,6 +67,13 @@ class UnicyclePathFollower:
     def goal_reached(self, current_position, goal_position):
         return np.linalg.norm(current_position[:2] - goal_position[:2]) < self.reached_threshold
 
+    def nearest_obs(self):
+        radius = self.obs[:, 2]
+        distances = np.linalg.norm(self.obs[:, :2] - self.robot.X[:2].T, axis=1)
+        min_distance_index = np.argmin(distances-radius)
+        nearest_obstacle = self.obs[min_distance_index]
+        return nearest_obstacle.reshape(-1, 1)
+
 
     def run(self, save_animation=False):
         print("===================================")
@@ -88,7 +96,8 @@ class UnicyclePathFollower:
 
             goal = np.array(self.waypoints[self.current_goal_index][0:2]) # set goal to next waypoint's (x,y)
 
-            h, dh_dx = self.robot.agent_barrier(self.obs)
+            nearest_obs = self.nearest_obs()
+            h, dh_dx = self.robot.agent_barrier(nearest_obs)
             self.u_ref.value = self.robot.nominal_input(goal)
             self.A1.value = dh_dx @ self.robot.g()
             self.b1.value = dh_dx @ self.robot.f() + self.alpha * h
@@ -156,6 +165,7 @@ if __name__ == "__main__":
     sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
     from utils import plotting
+    from utils import env
 
     path_to_continuous_waypoints = os.getcwd()+"/output/state_traj_ori_000.npy"
     path_to_continuous_waypoints = os.getcwd()+"/output/state_traj_vis_000.npy"
@@ -170,9 +180,8 @@ if __name__ == "__main__":
 
     plot_handler = plotting.Plotting(x_init, x_goal)
 
-    obs = np.array([0.8, 10.5, 0.2]).reshape(-1, 1)
-    #goal = np.array([1, 1])
-    path_follower = UnicyclePathFollower('unicycle2d', obs, x_init, waypoints,  alpha, dt, tf, 
+    path_follower = UnicyclePathFollower('unicycle2d', x_init, waypoints,  alpha, dt, tf, 
                                          show_animation=True,
-                                         plotting=plot_handler)
+                                         plotting=plot_handler,
+                                         env=env.Env())
     unexpected_beh = path_follower.run(save_animation=False)
