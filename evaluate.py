@@ -46,6 +46,7 @@ def planning(x_start, x_goal, visibility, path_saved):
         return 0
     return time_took
 
+@stopit.threading_timeoutable(default=[-1, -1])
 def following(path_saved):
     try:
         waypoints = np.load(path_saved)
@@ -85,8 +86,8 @@ def evaluate(num_runs=10):
             x_start = (2.0, 2.0, 0)  # Starting node (x, y, yaw)
             x_goal = (10.0, 2.0)  # Goal node
             # type = 1 (large env)
-            # x_start = (2.0, 2.0, 0)  # Starting node (x, y, yaw)
-            # x_goal = (25.0, 3.0)  # Goal node
+            x_start = (2.0, 2.0, 0)  # Starting node (x, y, yaw)
+            x_goal = (25.0, 3.0)  # Goal node
             
             if visibility:
                 path_saved = os.getcwd()+f"/output/{directory_name}/state_traj_vis_{i+1:03d}.npy"
@@ -99,7 +100,7 @@ def evaluate(num_runs=10):
                 # fonud a path
                 if time_took != 0:
                     break
-            unexpected_beh, early_violation = following(path_saved)
+            unexpected_beh, early_violation = following(path_saved, timeout=50)
             print(f"Unexpected_beh: {unexpected_beh}, Early Violation: {early_violation}, Time: {time_took}\n")
             # save the results with csv
             with open(f'output/{directory_name}/evaluated.csv', 'a') as f:
@@ -190,12 +191,12 @@ def plot(csv_path, csv_name="evaluated.csv"):
     #summary.reset_index()
 
 if __name__ == "__main__":
-    #csv_path = evaluate(num_runs=10)
-    #plot(csv_path)
+    csv_path = evaluate(num_runs=100)
+    plot(csv_path)
     # plot("", "type2.csv")
     # plt.close()
 
-    csv_path = "output/240225-0430"
-    following_only(csv_path)
-    plot("output/240225-0430/", "re-evaluated.csv")
-    plt.close()
+    # csv_path = "output/240225-0430"
+    # following_only(csv_path)
+    # plot("output/240225-0430/", "re-evaluated.csv")
+    # plt.close()
