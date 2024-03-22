@@ -44,7 +44,7 @@ class DynamicUnicycle2D:
 
     def nominal_input(self, X, G, d_min = 0.05, k_omega = 2.0, k_a = 1.0, k_v = 1.0):
         G = np.copy(G.reshape(-1,1)) # goal state
-        max_v = 1.0
+        max_v = 2.0
 
         distance = max(np.linalg.norm( X[0:2,0]-G[0:2,0] ) - d_min, 0.0) # don't need a min dist since it has accel
         theta_d = np.arctan2( G[1,0]-X[1,0], G[0,0]-X[0,0] )
@@ -55,15 +55,15 @@ class DynamicUnicycle2D:
             v = 0.0
         else:
             v = min(k_v * distance * np.cos(error_theta), max_v)
-        print("distance: ", distance, "v: ", v, "error_theta: ", error_theta)
+        #print("distance: ", distance, "v: ", v, "error_theta: ", error_theta)
         
         accel = k_a * ( v - X[3,0] )
-        print(f"CBF nominal acc: {accel}, omega:{omega}")
+        #print(f"CBF nominal acc: {accel}, omega:{omega}")
         return np.array([accel, omega]).reshape(-1,1)
     
-    def agent_barrier(self, X, obs, d_min = 0.5):
+    def agent_barrier(self, X, obs, robot_radius):
         obsX = obs[0:2]
-        d_min = obs[2][0] # radius
+        d_min = obs[2][0] + robot_radius # obs radius + robot radius
 
         beta = 1.01
     

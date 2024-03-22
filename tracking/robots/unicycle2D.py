@@ -58,9 +58,9 @@ class Unicycle2D:
     def sigma_der(self,s):
         return - self.k2 * np.exp(self.k1-s)/( 1+np.exp( self.k1-s ) ) * ( 1 - self.sigma(s)/self.k2 )
     
-    def agent_barrier(self, X, obs):
+    def agent_barrier(self, X, obs, robot_radius):
         obsX = obs[0:2]
-        d_min = obs[2][0] # radius
+        d_min = obs[2][0] + robot_radius # obs radius + robot radius
 
         beta = 1.01
         theta = X[2,0]

@@ -3,8 +3,8 @@ import numpy as np
 from shapely.geometry import Polygon, Point, LineString
 
 # import list of pre-defined robots
-from unicycle2D import Unicycle2D
-from dynamic_unicycle2D import DynamicUnicycle2D
+from robots.unicycle2D import Unicycle2D
+from robots.dynamic_unicycle2D import DynamicUnicycle2D
 
 
 def angle_normalize(x):
@@ -74,7 +74,7 @@ class BaseRobot:
         return self.robot.nominal_input(self.X, goal, d_min)
     
     def agent_barrier(self, obs):
-        return self.robot.agent_barrier(self.X, obs)
+        return self.robot.agent_barrier(self.X, obs, self.robot_radius)
 
     def step(self, U):
         # wrap step function
@@ -123,7 +123,10 @@ class BaseRobot:
 
     def update_safety_area(self):
         theta = self.X[2, 0]  # Current heading angle in radians
-        v = self.U[0, 0]  # Linear velocity
+        if self.type == 'Unicycle2D':
+            v = self.U[0, 0]  # Linear velocity
+        elif self.type == 'DynamicUnicycle2D':
+            v = self.X[3, 0]
         omega = self.U[1, 0]  # Angular velocity
         
         if omega != 0:
