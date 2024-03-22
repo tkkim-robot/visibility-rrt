@@ -23,6 +23,8 @@ class BaseRobot:
         self.type = type
         if type == 'Unicycle2D':
             self.robot = Unicycle2D(dt)
+        elif type == 'DynamicUnicycle2D':
+            self.robot = DynamicUnicycle2D(dt)
         else:
             raise ValueError("Invalid robot type")
         
@@ -77,9 +79,7 @@ class BaseRobot:
     def step(self, U):
         # wrap step function
         self.U = U.reshape(-1,1)
-        if self.type == 'Unicycle2D':
-            self.X = self.robot.step(self.X, self.U)
-
+        self.X = self.robot.step(self.X, self.U)
         return self.X
     
     def render_plot(self):
@@ -194,6 +194,8 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
     import cvxpy as cp
 
+    type = 'DynamicUnicycle2D'
+
     plt.ion()
     fig = plt.figure()
     ax = plt.axes()
@@ -204,7 +206,10 @@ if __name__ == "__main__":
     dt = 0.02
     tf = 20
     num_steps = int(tf/dt)
-    robot = BaseRobot( np.array([-1,-1,np.pi/4]).reshape(-1,1), dt, ax )
+    if type == 'Unicycle2D':
+        robot = BaseRobot( np.array([-1,-1,np.pi/4]).reshape(-1,1), dt, ax, type='Unicycle2D')
+    elif type == 'DynamicUnicycle2D':
+        robot = BaseRobot( np.array([-1,-1,np.pi/4, 0.0]).reshape(-1,1), dt, ax, type='DynamicUnicycle2D')
     obs = np.array([0.5, 0.3, 0.5]).reshape(-1,1)
     goal = np.array([2,0.5])
     ax.scatter(goal[0], goal[1], c='g')
@@ -218,18 +223,27 @@ if __name__ == "__main__":
     b1 = cp.Parameter((num_constraints,1), value = np.zeros((num_constraints,1)))
     objective = cp.Minimize( cp.sum_squares( u - u_ref ) ) 
     const = [A1 @ u + b1 >= 0]
-    alpha = 5.0 #10.0
     const += [ cp.abs( u[0,0] ) <= 1.0 ]
     const += [ cp.abs( u[1,0] ) <= 0.5 ]
     cbf_controller = cp.Problem( objective, const )
 
     for i in range(num_steps):
-        
-        h, dh_dx = robot.agent_barrier( obs)
         u_ref.value = robot.nominal_input( goal )
-        print(u_ref.value)
-        A1.value[0,:] = dh_dx @ robot.g()
-        b1.value[0,:] = dh_dx @ robot.f() + alpha * h
+        print("u ref: ", u_ref.value.T)
+        if type == 'Unicycle2D':
+            alpha = 5.0 #10.0
+            h, dh_dx = robot.agent_barrier( obs)
+            A1.value[0,:] = dh_dx @ robot.g()
+            b1.value[0,:] = dh_dx @ robot.f() + alpha * h
+        elif type == 'DynamicUnicycle2D':
+            alpha1 = 1.0
+            alpha2 = 2.0
+            h, h_dot, dh_dot_dx = robot.agent_barrier( obs)
+            A1.value[0,:] = dh_dot_dx @ robot.g()
+            b1.value[0,:] = dh_dot_dx @ robot.f() + (alpha1+alpha2) * h_dot + alpha1*alpha2*h
+
+            print(dh_dot_dx)
+
         cbf_controller.solve(solver=cp.GUROBI, reoptimize=True)
         
         if cbf_controller.status!='optimal':
