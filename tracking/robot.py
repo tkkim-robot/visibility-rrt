@@ -40,7 +40,7 @@ class BaseRobot:
         self.cam_range = 3.0  # [m]
 
         self.robot_radius = 0.25 # including padding
-        self.max_decel = 0.4  # [m/s^2]
+        self.max_decel = 0.5  # [m/s^2]
         self.max_ang_decel = 0.25  # [rad/s^2]
 
         self.U = np.array([0,0]).reshape(-1,1)

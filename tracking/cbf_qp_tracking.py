@@ -24,7 +24,7 @@ class UnicyclePathFollower:
             self.alpha1 = 1.0
             self.alpha2 = 1.0
             # v_max is set to 1.0 inside the robot class
-            self.a_max = 0.4
+            self.a_max = 0.5
             self.w_max = 0.5
             X0 = np.array([X0[0], X0[1], X0[2], 0.0]).reshape(-1, 1)
 
@@ -158,7 +158,7 @@ class UnicyclePathFollower:
             # update FOV
             self.robot.update_frontier()
             self.robot.update_safety_area()
-            if i > int(1.0 / self.dt): # exclude the first 1 seconds
+            if self.current_goal_index > 5: # exclude the first 1 seconds
                 beyond_flag = self.robot.is_beyond_frontier()
                 if i < int(5.0 / self.dt):
                     early_violation += beyond_flag
@@ -209,9 +209,7 @@ if __name__ == "__main__":
     from utils import plotting
     from utils import env
 
-    path_to_continuous_waypoints = os.getcwd()+"/output/state_traj_ori_000.npy"
-    path_to_continuous_waypoints = os.getcwd()+"/output/state_traj_vis_000.npy"
-    path_to_continuous_waypoints = os.getcwd()+"/output/state_traj_vis_long.npy"
+    path_to_continuous_waypoints = os.getcwd()+"/output/240225-0430/state_traj_ori_016.npy" # fails with QP
     path_to_continuous_waypoints = os.getcwd()+"/output/240225-0430/state_traj_ori_016.npy"
     waypoints = np.load(path_to_continuous_waypoints, allow_pickle=True)
     waypoints = np.array(waypoints, dtype=np.float64)
@@ -223,14 +221,14 @@ if __name__ == "__main__":
     plot_handler = plotting.Plotting(x_init, x_goal)
     env_handler = env.Env()
 
-    # path_follower = UnicyclePathFollower('Unicycle2D', x_init, waypoints,  dt, tf, 
-    #                                      show_animation=True,
-    #                                      plotting=plot_handler,
-    #                                      env=env_handler)
-    path_follower = UnicyclePathFollower('DynamicUnicycle2D', x_init, waypoints,  dt, tf, 
+    path_follower = UnicyclePathFollower('Unicycle2D', x_init, waypoints,  dt, tf, 
                                          show_animation=True,
                                          plotting=plot_handler,
                                          env=env_handler)
+    # path_follower = UnicyclePathFollower('DynamicUnicycle2D', x_init, waypoints,  dt, tf, 
+    #                                      show_animation=True,
+    #                                      plotting=plot_handler,
+    #                                      env=env_handler)
     # randomly generate 5 unknown obstacles
     x_range = env_handler.x_range
     y_range = env_handler.y_range

@@ -15,9 +15,6 @@ class DynamicUnicycle2D:
         '''
         self.type = 'DynamicUnicycle'   
         self.dt = dt     
- 
-        self.max_decel = 0.4  # [m/s^2]
-        self.max_ang_decel = 0.25  # [rad/s^2]
 
     def f(self, X):
         return np.array([X[3,0]*np.cos(X[2,0]),
@@ -44,7 +41,7 @@ class DynamicUnicycle2D:
 
     def nominal_input(self, X, G, d_min = 0.05, k_omega = 2.0, k_a = 1.0, k_v = 1.0):
         G = np.copy(G.reshape(-1,1)) # goal state
-        max_v = 2.0
+        max_v = 1.0
 
         distance = max(np.linalg.norm( X[0:2,0]-G[0:2,0] ) - d_min, 0.0) # don't need a min dist since it has accel
         theta_d = np.arctan2( G[1,0]-X[1,0], G[0,0]-X[0,0] )
