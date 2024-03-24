@@ -22,10 +22,10 @@ class UnicyclePathFollower:
             self.v_max = 1.0
             self.w_max = 0.5
         elif self.type == 'DynamicUnicycle2D':
-            self.alpha1 = 0.8
-            self.alpha2 = 0.5
+            self.alpha1 = 2.0
+            self.alpha2 = 1.0
             # v_max is set to 1.0 inside the robot class
-            self.a_max = 0.5
+            self.a_max = 0.3
             self.w_max = 0.5
             X0 = np.array([X0[0], X0[1], X0[2], 0.0]).reshape(-1, 1)
 
@@ -92,7 +92,8 @@ class UnicyclePathFollower:
                     (ox, oy), r,
                     edgecolor='black',
                     facecolor='orange',
-                    fill=True
+                    fill=True,
+                    alpha=0.4
                 )
             )
 
@@ -100,6 +101,7 @@ class UnicyclePathFollower:
         # if there was new obstacle detected, update the obs
         if len(detected_obs) != 0:
             all_obs = np.vstack((self.obs, detected_obs))
+            return np.array(detected_obs).reshape(-1, 1)
         else:
             all_obs = self.obs
 
@@ -108,6 +110,12 @@ class UnicyclePathFollower:
         min_distance_index = np.argmin(distances-radius)
         nearest_obstacle = all_obs[min_distance_index]
         return nearest_obstacle.reshape(-1, 1)
+    
+    def is_collide(self, obs):
+        # check if the robot collides with the obstacle
+        robot_radius = self.robot.robot_radius
+        distance = np.linalg.norm(self.robot.X[:2] - obs[:2])
+        return distance < obs[2] + robot_radius
 
 
     def run(self, save_animation=False):
@@ -132,6 +140,7 @@ class UnicyclePathFollower:
             goal = np.array(self.waypoints[self.current_goal_index][0:2]) # set goal to next waypoint's (x,y)
 
             detected_obs = self.robot.detect_unknown_obs(self.unknown_obs)
+
             nearest_obs = self.get_nearest_obs(detected_obs)
             self.u_ref.value = self.robot.nominal_input(goal)
             if self.type == 'Unicycle2D':
@@ -144,10 +153,25 @@ class UnicyclePathFollower:
                 self.b1.value[0,:] = dh_dot_dx @ self.robot.f() + (self.alpha1+self.alpha2) * h_dot + self.alpha1*self.alpha2*h
 
             self.cbf_controller.solve(solver=cp.GUROBI, reoptimize=True)
+            collide = self.is_collide(nearest_obs)
 
-            if self.cbf_controller.status != 'optimal':
+            if self.cbf_controller.status != 'optimal' or collide:
                 print("ERROR in QP")
                 unexpected_beh = -1 # reutn with error
+                if self.show_animation:
+                    self.robot.render_plot()
+                    current_position = self.robot.X[:2].flatten()
+                    self.ax.text(current_position[0]+0.5, current_position[1]+0.5, '!', color='red', weight='bold', fontsize=22)
+                    self.fig.canvas.draw()
+                    self.fig.canvas.flush_events()
+                    plt.pause(5)
+
+                if save_animation:
+                    current_directory_path = os.getcwd() 
+                    if not os.path.exists(current_directory_path + "/output/animations"):
+                        os.makedirs(current_directory_path + "/output/animations")
+                    plt.savefig(current_directory_path +
+                                "/output/animations/" + "t_step_" + str(ani_idx) + ".png")
                 break
 
             self.robot.step(self.u.value)
@@ -209,7 +233,8 @@ if __name__ == "__main__":
     from utils import env
 
     path_to_continuous_waypoints = os.getcwd()+"/output/240225-0430/state_traj_ori_016.npy" # fails with QP
-    path_to_continuous_waypoints = os.getcwd()+"/output/240225-0430/state_traj_vis_096.npy"
+    #path_to_continuous_waypoints = os.getcwd()+"/output/240225-0430/state_traj_vis_096.npy"
+    path_to_continuous_waypoints = os.getcwd()+"/output/240225-0430/state_traj_ori_035.npy"
     waypoints = np.load(path_to_continuous_waypoints, allow_pickle=True)
     waypoints = np.array(waypoints, dtype=np.float64)
 
@@ -237,5 +262,7 @@ if __name__ == "__main__":
     #                     [11, 8, 0.5]])
     # )
     unknown_obs = np.array([[10, 7.5, 0.5]])
+    unknown_obs = np.array([[9.5, 7.5, 1.0]])
+
     path_follower.set_unknown_obs(unknown_obs)
     unexpected_beh = path_follower.run(save_animation=False)

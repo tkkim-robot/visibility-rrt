@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 from shapely.geometry import Polygon, Point, LineString
 
@@ -59,6 +60,9 @@ class BaseRobot:
         self.fov_fill = ax.fill([], [], 'k', alpha=0.1)[0]  # Access the first element
         self.frontier_fill = ax.fill([], [], 'b', alpha=0.1)[0]  # Access the first element
         self.safety_area_fill = ax.fill([], [], 'r', alpha=0.3)[0]  
+
+        self.detected_obs = None
+        self.detected_obs_patch = ax.add_patch(plt.Circle((0, 0), 0, edgecolor='black',facecolor='orange', fill=True))
         self.frontier = Polygon() # preserve the union of all the FOV triangles
         self.safety_area = Polygon() # preserve the union of all the safety areas
         self.positions = []  # List to store the positions for plotting
@@ -115,6 +119,10 @@ class BaseRobot:
                 safety_x = [x for poly in self.safety_area.geoms for x in poly.exterior.xy[0]]
                 safety_y = [y for poly in self.safety_area.geoms for y in poly.exterior.xy[1]]
             self.safety_area_fill.set_xy(np.array([safety_x, safety_y]).T)
+        if self.detected_obs is not None:
+            print("Asdf")
+            self.detected_obs_patch.center = self.detected_obs[0], self.detected_obs[1]
+            self.detected_obs_patch.set_radius(self.detected_obs[2])
     
     def update_frontier(self):
         fov_left, fov_right = self.calculate_fov_points()
@@ -191,6 +199,7 @@ class BaseRobot:
                     detected_points.append(point)
 
         if len(detected_points) == 0:
+            self.detected_obs = None
             return []
 
         distances = np.linalg.norm(detected_points - self.X[0:2].reshape(-1), axis=1)
@@ -206,7 +215,8 @@ class BaseRobot:
         center = (closest_point + furthest_point) / 2
         radius = np.linalg.norm(furthest_point - closest_point) / 2
 
-        return [center[0], center[1], radius]
+        self.detected_obs = [center[0], center[1], radius]
+        return self.detected_obs
     
     
     def calculate_fov_points(self):
