@@ -5,6 +5,7 @@ import cvxpy as cp
 import os
 import glob
 import subprocess
+
 class UnicyclePathFollower:
     def __init__(self, type, X0, waypoints, dt=0.05, tf=100,
                   show_animation=False, plotting=None, env=None):
@@ -21,8 +22,8 @@ class UnicyclePathFollower:
             self.v_max = 1.0
             self.w_max = 0.5
         elif self.type == 'DynamicUnicycle2D':
-            self.alpha1 = 1.0
-            self.alpha2 = 1.0
+            self.alpha1 = 0.8
+            self.alpha2 = 0.5
             # v_max is set to 1.0 inside the robot class
             self.a_max = 0.5
             self.w_max = 0.5
@@ -59,7 +60,7 @@ class UnicyclePathFollower:
         try:
             from tracking.robot import BaseRobot
         except ImportError:
-            from tracking.robot import BaseRobot
+            from robot import BaseRobot
         self.robot = BaseRobot(X0.reshape(-1, 1), self.dt, self.ax, self.type)
 
     def setup_control_problem(self):
@@ -138,9 +139,7 @@ class UnicyclePathFollower:
                 self.A1.value[0,:] = dh_dx @ self.robot.g()
                 self.b1.value[0,:] = dh_dx @ self.robot.f() + self.alpha * h
             elif self.type == 'DynamicUnicycle2D':
-                print(nearest_obs)
                 h, h_dot, dh_dot_dx = self.robot.agent_barrier(nearest_obs)
-                print(h)
                 self.A1.value[0,:] = dh_dot_dx @ self.robot.g()
                 self.b1.value[0,:] = dh_dot_dx @ self.robot.f() + (self.alpha1+self.alpha2) * h_dot + self.alpha1*self.alpha2*h
 
@@ -210,7 +209,7 @@ if __name__ == "__main__":
     from utils import env
 
     path_to_continuous_waypoints = os.getcwd()+"/output/240225-0430/state_traj_ori_016.npy" # fails with QP
-    path_to_continuous_waypoints = os.getcwd()+"/output/240225-0430/state_traj_ori_016.npy"
+    path_to_continuous_waypoints = os.getcwd()+"/output/240225-0430/state_traj_vis_096.npy"
     waypoints = np.load(path_to_continuous_waypoints, allow_pickle=True)
     waypoints = np.array(waypoints, dtype=np.float64)
 
@@ -221,14 +220,12 @@ if __name__ == "__main__":
     plot_handler = plotting.Plotting(x_init, x_goal)
     env_handler = env.Env()
 
-    path_follower = UnicyclePathFollower('Unicycle2D', x_init, waypoints,  dt, tf, 
+    type = 'Unicycle2D'
+    type = 'DynamicUnicycle2D'
+    path_follower = UnicyclePathFollower(type, x_init, waypoints, dt, tf, 
                                          show_animation=True,
                                          plotting=plot_handler,
                                          env=env_handler)
-    # path_follower = UnicyclePathFollower('DynamicUnicycle2D', x_init, waypoints,  dt, tf, 
-    #                                      show_animation=True,
-    #                                      plotting=plot_handler,
-    #                                      env=env_handler)
     # randomly generate 5 unknown obstacles
     x_range = env_handler.x_range
     y_range = env_handler.y_range
