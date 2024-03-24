@@ -23,9 +23,9 @@ class UnicyclePathFollower:
             self.w_max = 0.5
         elif self.type == 'DynamicUnicycle2D':
             self.alpha1 = 2.0
-            self.alpha2 = 1.0
+            self.alpha2 = 2.0
             # v_max is set to 1.0 inside the robot class
-            self.a_max = 0.3
+            self.a_max = 0.5
             self.w_max = 0.5
             X0 = np.array([X0[0], X0[1], X0[2], 0.0]).reshape(-1, 1)
 
@@ -233,8 +233,8 @@ if __name__ == "__main__":
     from utils import env
 
     path_to_continuous_waypoints = os.getcwd()+"/output/240225-0430/state_traj_ori_016.npy" # fails with QP
-    #path_to_continuous_waypoints = os.getcwd()+"/output/240225-0430/state_traj_vis_096.npy"
-    path_to_continuous_waypoints = os.getcwd()+"/output/240225-0430/state_traj_ori_035.npy"
+    path_to_continuous_waypoints = os.getcwd()+"/output/240225-0430/state_traj_vis_017.npy"
+    path_to_continuous_waypoints = os.getcwd()+"/output/240225-0430/state_traj_ori_040.npy"
     waypoints = np.load(path_to_continuous_waypoints, allow_pickle=True)
     waypoints = np.array(waypoints, dtype=np.float64)
 

@@ -63,6 +63,7 @@ class BaseRobot:
 
         self.detected_obs = None
         self.detected_obs_patch = ax.add_patch(plt.Circle((0, 0), 0, edgecolor='black',facecolor='orange', fill=True))
+        self.detected_points_scatter = ax.scatter([],[],s=10,facecolors='r',edgecolors='r') #facecolors='none'
         self.frontier = Polygon() # preserve the union of all the FOV triangles
         self.safety_area = Polygon() # preserve the union of all the safety areas
         self.positions = []  # List to store the positions for plotting
@@ -120,9 +121,10 @@ class BaseRobot:
                 safety_y = [y for poly in self.safety_area.geoms for y in poly.exterior.xy[1]]
             self.safety_area_fill.set_xy(np.array([safety_x, safety_y]).T)
         if self.detected_obs is not None:
-            print("Asdf")
             self.detected_obs_patch.center = self.detected_obs[0], self.detected_obs[1]
             self.detected_obs_patch.set_radius(self.detected_obs[2])
+        if len(self.detected_points) > 0:
+            self.detected_points_scatter.set_offsets(np.array(self.detected_points))
     
     def update_frontier(self):
         fov_left, fov_right = self.calculate_fov_points()
@@ -179,11 +181,31 @@ class BaseRobot:
             self.unsafe_points.append((self.X[0, 0], self.X[1, 0]))
         return flag
     
-    def detect_unknown_obs(self, unknown_obs, obs_margin=0.15):
+    def find_extreme_points(self, detected_points):
+        # Convert points and robot position to numpy arrays for vectorized operations
+        points = np.array(detected_points)
+        robot_pos = self.X[0:2].reshape(-1)
+        robot_yaw = self.X[2, 0]
+        vectors_to_points = points - robot_pos
+        robot_heading_vector = np.array([np.cos(robot_yaw), np.sin(robot_yaw)])
+        angles = np.arctan2(vectors_to_points[:, 1], vectors_to_points[:, 0]) - np.arctan2(robot_heading_vector[1], robot_heading_vector[0])
+
+        angles = (angles + np.pi) % (2 * np.pi) - np.pi
+
+        leftmost_index = np.argmin(angles)
+        rightmost_index = np.argmax(angles)
+        
+        # Extract the most left and most right points
+        leftmost_point = points[leftmost_index]
+        rightmost_point = points[rightmost_index]
+        
+        return leftmost_point, rightmost_point
+
+    def detect_unknown_obs(self, unknown_obs, obs_margin=0.01):
         if unknown_obs is None:
             return []
         #detected_obs = []
-        detected_points = []
+        self.detected_points = []
         for obs in unknown_obs:
             obs_circle = Point(obs[0], obs[1]).buffer(obs[2]-obs_margin)
             intersected_area = self.frontier.intersection(obs_circle)
@@ -196,24 +218,16 @@ class BaseRobot:
 
                 # Check if the line intersects with the obstacle (excluding the endpoints)
                 if not line_to_point.crosses(obs_circle):
-                    detected_points.append(point)
+                    self.detected_points.append(point)
 
-        if len(detected_points) == 0:
+        if len(self.detected_points) == 0:
             self.detected_obs = None
             return []
-
-        distances = np.linalg.norm(detected_points - self.X[0:2].reshape(-1), axis=1)
-
-        # Find the closest and furthest points from the robot's position
-        closest_point = detected_points[np.argmin(distances)]
-        furthest_point = detected_points[np.argmax(distances)]
-
-        closest_point = np.array(closest_point)
-        furthest_point = np.array(furthest_point)
+        leftmost_most, rightmost_point = self.find_extreme_points(self.detected_points)
 
         # Calculate the center and radius of the circle
-        center = (closest_point + furthest_point) / 2
-        radius = np.linalg.norm(furthest_point - closest_point) / 2
+        center = (leftmost_most + rightmost_point) / 2
+        radius = np.linalg.norm(rightmost_point - leftmost_most) / 2
 
         self.detected_obs = [center[0], center[1], radius]
         return self.detected_obs
