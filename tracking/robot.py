@@ -34,16 +34,12 @@ class BaseRobot:
         self.X = X0.reshape(-1,1)
         self.dt = dt
       
-        # for exp 
-        self.k1 = 0.5 #=#1.0
-        self.k2 = 1.8 #0.5
-
         # FOV parameters
         self.fov_angle = np.deg2rad(70)  # [rad]
         self.cam_range = 3.0  # [m]
 
         self.robot_radius = 0.25 # including padding
-        self.max_decel = 0.5  # [m/s^2]
+        self.max_decel = 0.5 # [m/s^2]
         self.max_ang_decel = 0.25  # [rad/s^2]
 
         self.U = np.array([0,0]).reshape(-1,1)
@@ -158,18 +154,11 @@ class BaseRobot:
 
             # Convert trajectory points to a LineString and buffer by robot radius
             if len(trajectory_points) >= 2:
-                print("11)")
-                print(len(trajectory_points))
                 trajectory_line = LineString([(p.x, p.y) for p in trajectory_points])
                 self.safety_area = trajectory_line.buffer(self.robot_radius)
-                print(type(self.safety_area))
             else:
-                print("22)")
-
                 self.safety_area = Point(self.X[0, 0], self.X[1, 0]).buffer(self.robot_radius)
-        else:
-            print("33)")
-            
+        else:    
             braking_distance = v**2 / (2 * self.max_decel)  # Braking distance
             # Straight motion
             front_center = (self.X[0, 0] + braking_distance * np.cos(theta),
@@ -182,15 +171,43 @@ class BaseRobot:
             self.unsafe_points.append((self.X[0, 0], self.X[1, 0]))
         return flag
     
-    def detect_unknown_obs(self, unknown_obs):
+    def detect_unknown_obs(self, unknown_obs, obs_margin=0.15):
         if unknown_obs is None:
             return []
-        detected_obs = []
+        #detected_obs = []
+        detected_points = []
         for obs in unknown_obs:
-            obs_circle = Point(obs[0], obs[1]).buffer(obs[2])
-            if self.frontier.intersects(obs_circle):
-                detected_obs.append(obs)
-        return detected_obs
+            obs_circle = Point(obs[0], obs[1]).buffer(obs[2]-obs_margin)
+            intersected_area = self.frontier.intersection(obs_circle)
+
+            # Check each point on the intersected area's exterior
+            for point in intersected_area.exterior.coords:
+                point_obj = Point(point)
+                # Line from robot's position to the current point
+                line_to_point = LineString([Point(self.X[0, 0], self.X[1, 0]), point_obj])
+
+                # Check if the line intersects with the obstacle (excluding the endpoints)
+                if not line_to_point.crosses(obs_circle):
+                    detected_points.append(point)
+
+        if len(detected_points) == 0:
+            return []
+
+        distances = np.linalg.norm(detected_points - self.X[0:2].reshape(-1), axis=1)
+
+        # Find the closest and furthest points from the robot's position
+        closest_point = detected_points[np.argmin(distances)]
+        furthest_point = detected_points[np.argmax(distances)]
+
+        closest_point = np.array(closest_point)
+        furthest_point = np.array(furthest_point)
+
+        # Calculate the center and radius of the circle
+        center = (closest_point + furthest_point) / 2
+        radius = np.linalg.norm(furthest_point - closest_point) / 2
+
+        return [center[0], center[1], radius]
+    
     
     def calculate_fov_points(self):
         """
