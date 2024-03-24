@@ -2,11 +2,6 @@ import numpy as np
 
 from shapely.geometry import Polygon, Point, LineString
 
-# import list of pre-defined robots
-from robots.unicycle2D import Unicycle2D
-from robots.dynamic_unicycle2D import DynamicUnicycle2D
-
-
 def angle_normalize(x):
     return (((x + np.pi) % (2 * np.pi)) - np.pi)
 
@@ -22,8 +17,16 @@ class BaseRobot:
         
         self.type = type
         if type == 'Unicycle2D':
+            try:
+                from tracking.robots.unicycle2D import Unicycle2D
+            except ImportError:
+                from robots.unicycle2D import Unicycle2D
             self.robot = Unicycle2D(dt)
         elif type == 'DynamicUnicycle2D':
+            try:
+                from tracking.robots.dynamic_unicycle2D import DynamicUnicycle2D
+            except ImportError:
+                from robots.dynamic_unicycle2D import DynamicUnicycle2D
             self.robot = DynamicUnicycle2D(dt)
         else:
             raise ValueError("Invalid robot type")
@@ -110,7 +113,11 @@ class BaseRobot:
             self.frontier_fill.set_xy(np.array([frontier_x, frontier_y]).T)  # Update the vertices of the polygon
             #ax.fill(frontier_x, frontier_y, alpha=0.1, fc='r', ec='none')
         if not self.safety_area.is_empty:
-            safety_x, safety_y = self.safety_area.exterior.xy
+            if self.safety_area.geom_type == 'Polygon':
+                safety_x, safety_y = self.safety_area.exterior.xy
+            elif self.safety_area.geom_type == 'MultiPolygon':
+                safety_x = [x for poly in self.safety_area.geoms for x in poly.exterior.xy[0]]
+                safety_y = [y for poly in self.safety_area.geoms for y in poly.exterior.xy[1]]
             self.safety_area_fill.set_xy(np.array([safety_x, safety_y]).T)
     
     def update_frontier(self):
@@ -151,11 +158,18 @@ class BaseRobot:
 
             # Convert trajectory points to a LineString and buffer by robot radius
             if len(trajectory_points) >= 2:
+                print("11)")
+                print(len(trajectory_points))
                 trajectory_line = LineString([(p.x, p.y) for p in trajectory_points])
                 self.safety_area = trajectory_line.buffer(self.robot_radius)
+                print(type(self.safety_area))
             else:
+                print("22)")
+
                 self.safety_area = Point(self.X[0, 0], self.X[1, 0]).buffer(self.robot_radius)
         else:
+            print("33)")
+            
             braking_distance = v**2 / (2 * self.max_decel)  # Braking distance
             # Straight motion
             front_center = (self.X[0, 0] + braking_distance * np.cos(theta),
