@@ -22,8 +22,8 @@ class UnicyclePathFollower:
             self.v_max = 1.0
             self.w_max = 0.5
         elif self.type == 'DynamicUnicycle2D':
-            self.alpha1 = 2.0
-            self.alpha2 = 2.0
+            self.alpha1 = 1.5
+            self.alpha2 = 1.5
             # v_max is set to 1.0 inside the robot class
             self.a_max = 0.5
             self.w_max = 0.5
@@ -96,6 +96,7 @@ class UnicyclePathFollower:
                     alpha=0.4
                 )
             )
+        self.robot.test_type = 'cbf_qp'
 
     def get_nearest_obs(self, detected_obs):
         # if there was new obstacle detected, update the obs
@@ -111,11 +112,12 @@ class UnicyclePathFollower:
         nearest_obstacle = all_obs[min_distance_index]
         return nearest_obstacle.reshape(-1, 1)
     
-    def is_collide(self, obs):
-        # check if the robot collides with the obstacle
-        robot_radius = self.robot.robot_radius
-        distance = np.linalg.norm(self.robot.X[:2] - obs[:2])
-        return distance < obs[2] + robot_radius
+    def is_collide_unknown(self):
+        for obs in self.unknown_obs:
+            # check if the robot collides with the obstacle
+            robot_radius = self.robot.robot_radius
+            distance = np.linalg.norm(self.robot.X[:2] - obs[:2])
+            return distance < obs[2] + robot_radius
 
 
     def run(self, save_animation=False):
@@ -153,7 +155,7 @@ class UnicyclePathFollower:
                 self.b1.value[0,:] = dh_dot_dx @ self.robot.f() + (self.alpha1+self.alpha2) * h_dot + self.alpha1*self.alpha2*h
 
             self.cbf_controller.solve(solver=cp.GUROBI, reoptimize=True)
-            collide = self.is_collide(nearest_obs)
+            collide = self.is_collide_unknown()
 
             if self.cbf_controller.status != 'optimal' or collide:
                 print("ERROR in QP")
@@ -223,7 +225,7 @@ class UnicyclePathFollower:
 
 if __name__ == "__main__":
     dt = 0.05
-    tf = 100
+    tf = 15
     num_steps = int(tf/dt)
     import sys
     import os
@@ -232,9 +234,9 @@ if __name__ == "__main__":
     from utils import plotting
     from utils import env
 
-    path_to_continuous_waypoints = os.getcwd()+"/output/240225-0430/state_traj_ori_016.npy" # fails with QP
-    path_to_continuous_waypoints = os.getcwd()+"/output/240225-0430/state_traj_vis_017.npy"
-    path_to_continuous_waypoints = os.getcwd()+"/output/240225-0430/state_traj_ori_040.npy"
+    path_to_continuous_waypoints = os.getcwd()+"/output/240225-0430/state_traj_ori_016.npy" # fails with QP 34 16
+    #path_to_continuous_waypoints = os.getcwd()+"/output/240225-0430/state_traj_vis_041.npy"
+    #path_to_continuous_waypoints = os.getcwd()+"/output/240225-0430/state_traj_ori_027.npy"
     waypoints = np.load(path_to_continuous_waypoints, allow_pickle=True)
     waypoints = np.array(waypoints, dtype=np.float64)
 
@@ -262,7 +264,10 @@ if __name__ == "__main__":
     #                     [11, 8, 0.5]])
     # )
     unknown_obs = np.array([[10, 7.5, 0.5]])
-    unknown_obs = np.array([[9.5, 7.5, 1.0]])
+    #unknown_obs = np.array([[9, 8, 0.7]])
+    #unknown_obs = np.array([[9.5, 7.5, 1.0]])
+    unknown_obs = np.array([[10.3, 7.1, 0.3]])
+    unknown_obs = np.array([[9.0, 8.8, 0.3]]) # 45 FOV
 
     path_follower.set_unknown_obs(unknown_obs)
-    unexpected_beh = path_follower.run(save_animation=False)
+    unexpected_beh = path_follower.run(save_animation=True)

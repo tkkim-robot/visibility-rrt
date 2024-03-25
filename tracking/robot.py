@@ -17,6 +17,7 @@ class BaseRobot:
         '''
         
         self.type = type
+        self.test_type = 'gatekeeper' # or 'cbf_qp'
         if type == 'Unicycle2D':
             try:
                 from tracking.robots.unicycle2D import Unicycle2D
@@ -36,7 +37,7 @@ class BaseRobot:
         self.dt = dt
       
         # FOV parameters
-        self.fov_angle = np.deg2rad(70)  # [rad]
+        self.fov_angle = np.deg2rad(45)  # [rad]
         self.cam_range = 3.0  # [m]
 
         self.robot_radius = 0.25 # including padding
@@ -62,6 +63,7 @@ class BaseRobot:
         self.safety_area_fill = ax.fill([], [], 'r', alpha=0.3)[0]  
 
         self.detected_obs = None
+        self.detected_points = []
         self.detected_obs_patch = ax.add_patch(plt.Circle((0, 0), 0, edgecolor='black',facecolor='orange', fill=True))
         self.detected_points_scatter = ax.scatter([],[],s=10,facecolors='r',edgecolors='r') #facecolors='none'
         self.frontier = Polygon() # preserve the union of all the FOV triangles
@@ -90,7 +92,7 @@ class BaseRobot:
         x = np.array([self.X[0,0],self.X[1,0],self.X[2,0]])
         #self.body._offsets3d = ([[x[0]],[x[1]],[x[2]]])
         self.body.set_offsets([x[0], x[1]])
-        if len(self.unsafe_points) > 0:
+        if len(self.unsafe_points) > 0 and self.test_type == 'gatekeeper':
             self.unsafe_points_handle.set_offsets(np.array(self.unsafe_points))
         
         self.axis.set_ydata([self.X[1,0],self.X[1,0]+self.vis_orient_len*np.sin(self.X[2,0])])
@@ -201,7 +203,7 @@ class BaseRobot:
         
         return leftmost_point, rightmost_point
 
-    def detect_unknown_obs(self, unknown_obs, obs_margin=0.01):
+    def detect_unknown_obs(self, unknown_obs, obs_margin=0.05):
         if unknown_obs is None:
             return []
         #detected_obs = []
@@ -211,7 +213,17 @@ class BaseRobot:
             intersected_area = self.frontier.intersection(obs_circle)
 
             # Check each point on the intersected area's exterior
-            for point in intersected_area.exterior.coords:
+
+            points = []
+            if intersected_area.geom_type == 'Polygon':
+                for point in intersected_area.exterior.coords:
+                    points.append(point)
+            elif intersected_area.geom_type == 'MultiPolygon':
+                for poly in intersected_area.geoms:
+                    for point in poly.exterior.coords:
+                        points.append(point)
+
+            for point in points:
                 point_obj = Point(point)
                 # Line from robot's position to the current point
                 line_to_point = LineString([Point(self.X[0, 0], self.X[1, 0]), point_obj])
@@ -281,7 +293,7 @@ if __name__ == "__main__":
     b1 = cp.Parameter((num_constraints,1), value = np.zeros((num_constraints,1)))
     objective = cp.Minimize( cp.sum_squares( u - u_ref ) ) 
     const = [A1 @ u + b1 >= 0]
-    const += [ cp.abs( u[0,0] ) <= 1.0 ]
+    const += [ cp.abs( u[0,0] ) <= 0.5 ]
     const += [ cp.abs( u[1,0] ) <= 0.5 ]
     cbf_controller = cp.Problem( objective, const )
 
@@ -294,7 +306,7 @@ if __name__ == "__main__":
             A1.value[0,:] = dh_dx @ robot.g()
             b1.value[0,:] = dh_dx @ robot.f() + alpha * h
         elif type == 'DynamicUnicycle2D':
-            alpha1 = 1.0
+            alpha1 = 2.0
             alpha2 = 2.0
             h, h_dot, dh_dot_dx = robot.agent_barrier( obs)
             A1.value[0,:] = dh_dot_dx @ robot.g()
