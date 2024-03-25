@@ -45,6 +45,7 @@ def planning(x_start, x_goal, visibility, path_saved):
         return 0
     return time_took
 
+
 @stopit.threading_timeoutable(default=[-2, 0])
 def following(path_saved, robot_type, test_type):
     try:
@@ -89,8 +90,8 @@ def evaluate(num_runs=10, type='Unicycle2D'):
             x_start = (2.0, 2.0, 0)  # Starting node (x, y, yaw)
             x_goal = (10.0, 2.0)  # Goal node
             # type = 1 (large env)
-            # x_start = (2.0, 2.0, 0)  # Starting node (x, y, yaw)
-            # x_goal = (25.0, 3.0)  # Goal node
+            x_start = (2.0, 2.0, 0)  # Starting node (x, y, yaw)
+            x_goal = (25.0, 3.0)  # Goal node
             
             if visibility:
                 path_saved = os.getcwd()+f"/output/{directory_name}/state_traj_vis_{i+1:03d}.npy"
@@ -235,11 +236,10 @@ def plot_test_cbf_qp(csv_path, csv_name="evaluated.csv"):
     #summary.reset_index()
 
 if __name__ == "__main__":
-    #csv_path = evaluate(num_runs=10)
-    #plot(csv_path)
+    csv_path = evaluate(num_runs=100)
+    plot(csv_path)
     # plot("", "type2.csv")
     # plt.close()
-
 
     csv_path = "output/240225-0430"
     robot_type = 'DynamicUnicycle2D'
@@ -253,3 +253,4 @@ if __name__ == "__main__":
         plot_test_gatekeeper("output/240225-0430/", f"re-evaluated_{robot_type}_{test_type}.csv") 
     
     plt.close()
+
