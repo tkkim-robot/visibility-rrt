@@ -37,7 +37,7 @@ class BaseRobot:
         self.dt = dt
       
         # FOV parameters
-        self.fov_angle = np.deg2rad(45)  # [rad]
+        self.fov_angle = np.deg2rad(70)  # [rad]
         self.cam_range = 3.0  # [m]
 
         self.robot_radius = 0.25 # including padding
@@ -208,7 +208,10 @@ class BaseRobot:
             return []
         #detected_obs = []
         self.detected_points = []
-        for obs in unknown_obs:
+
+        # sort unknown_obs by distance to the robot, closest first
+        sorted_unknown_obs = sorted(unknown_obs, key=lambda obs: np.linalg.norm(np.array(obs[0:2]) - self.X[0:2].reshape(-1)))
+        for obs in sorted_unknown_obs:
             obs_circle = Point(obs[0], obs[1]).buffer(obs[2]-obs_margin)
             intersected_area = self.frontier.intersection(obs_circle)
 
@@ -229,8 +232,12 @@ class BaseRobot:
                 line_to_point = LineString([Point(self.X[0, 0], self.X[1, 0]), point_obj])
 
                 # Check if the line intersects with the obstacle (excluding the endpoints)
+                # only consider the front side of the obstacle
                 if not line_to_point.crosses(obs_circle):
                     self.detected_points.append(point)
+                
+            if len(self.detected_points) > 0:
+                break
 
         if len(self.detected_points) == 0:
             self.detected_obs = None

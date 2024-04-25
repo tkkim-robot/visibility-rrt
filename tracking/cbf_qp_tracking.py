@@ -113,6 +113,8 @@ class UnicyclePathFollower:
         return nearest_obstacle.reshape(-1, 1)
     
     def is_collide_unknown(self):
+        if self.unknown_obs is None:
+            return False
         for obs in self.unknown_obs:
             # check if the robot collides with the obstacle
             robot_radius = self.robot.robot_radius
@@ -225,8 +227,6 @@ class UnicyclePathFollower:
 
 if __name__ == "__main__":
     dt = 0.05
-    tf = 15
-    num_steps = int(tf/dt)
     import sys
     import os
     sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
@@ -234,9 +234,26 @@ if __name__ == "__main__":
     from utils import plotting
     from utils import env
 
-    path_to_continuous_waypoints = os.getcwd()+"/output/240225-0430/state_traj_ori_016.npy" # fails with QP 34 16
-    #path_to_continuous_waypoints = os.getcwd()+"/output/240225-0430/state_traj_vis_041.npy"
-    #path_to_continuous_waypoints = os.getcwd()+"/output/240225-0430/state_traj_ori_027.npy"
+
+    env_type = env.type
+    
+    if env_type == 1:
+        tf = 100
+    elif env_type == 2:
+        tf = 15
+
+    num_steps = int(tf/dt)
+
+    if env_type == 1:
+        # type 1
+        path_to_continuous_waypoints = os.getcwd()+"/output/240312-2128_large_env/state_traj_vis_005.npy"
+        path_to_continuous_waypoints = os.getcwd()+"/output/240312-2128_large_env/state_traj_ori_001.npy"
+
+    elif env_type == 2:
+        path_to_continuous_waypoints = os.getcwd()+"/output/240225-0430/state_traj_ori_016.npy" # fails with QP 34 16
+        #path_to_continuous_waypoints = os.getcwd()+"/output/240225-0430/state_traj_vis_041.npy"
+        #path_to_continuous_waypoints = os.getcwd()+"/output/240225-0430/state_traj_ori_027.npy"
+
     waypoints = np.load(path_to_continuous_waypoints, allow_pickle=True)
     waypoints = np.array(waypoints, dtype=np.float64)
 
@@ -263,11 +280,15 @@ if __name__ == "__main__":
     #                     [10.5, 8, 0.5],
     #                     [11, 8, 0.5]])
     # )
-    unknown_obs = np.array([[10, 7.5, 0.5]])
-    #unknown_obs = np.array([[9, 8, 0.7]])
-    #unknown_obs = np.array([[9.5, 7.5, 1.0]])
-    unknown_obs = np.array([[10.3, 7.1, 0.3]])
-    unknown_obs = np.array([[9.0, 8.8, 0.3]]) # 45 FOV
+
+    if env_type == 1:
+        unknown_obs = np.array([[13.0, 10.0, 0.5],
+                                [12.0, 13.0, 0.5],
+                                [15.0, 20.0, 0.5],
+                                [20.5, 20.5, 0.5],
+                                [24.0, 15.0, 0.5]]) # 45 FOV, type 1 (small)
+    elif env_type == 2: 
+        unknown_obs = np.array([[9.0, 8.8, 0.3]]) # 45 FOV, type 2 (small)
 
     path_follower.set_unknown_obs(unknown_obs)
-    unexpected_beh = path_follower.run(save_animation=True)
+    unexpected_beh = path_follower.run(save_animation=False)
