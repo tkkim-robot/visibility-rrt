@@ -11,6 +11,8 @@ from utils import env, plotting
 import gc
 import stopit
 
+env_type = env.type
+
 def planning_wrapper(lqr_rrt_star, result_queue):
     waypoints = lqr_rrt_star.planning()
     result_queue.put(waypoints)  # Use a queue to safely return data from the process
@@ -64,8 +66,14 @@ def following(path_saved, robot_type, test_type):
                                          plotting=plot_handler,
                                          env=env_handler)
     if test_type =='cbf_qp':
-        unknown_obs = np.array([[9.5, 7.5, 1.0]])
-        unknown_obs = np.array([[9.0, 8.8, 0.3]])
+        if env_type == 1:
+            unknown_obs = np.array([[13.0, 10.0, 0.5],
+                                [12.0, 13.0, 0.5],
+                                [15.0, 20.0, 0.5],
+                                [20.5, 20.5, 0.5],
+                                [24.0, 15.0, 0.5]])
+        elif env_type == 2:
+            unknown_obs = np.array([[9.0, 8.8, 0.3]]) # test for FOV 45, type 2 (small env)
         path_follower.set_unknown_obs(unknown_obs)
         print("set unknown obs")
     unexpected_beh, early_violation = path_follower.run(save_animation=False)
@@ -87,12 +95,13 @@ def evaluate(num_runs=10, type='Unicycle2D'):
         for i in range(num_runs):
             print(f"\nVisibility: {visibility}, Run: {i+1}")
 
-            x_start = (2.0, 2.0, 0)  # Starting node (x, y, yaw)
-            x_goal = (10.0, 2.0)  # Goal node
-            # type = 1 (large env)
-            x_start = (2.0, 2.0, 0)  # Starting node (x, y, yaw)
-            x_goal = (25.0, 3.0)  # Goal node
-            
+            if env_type == 1:
+                x_start = (2.0, 2.0, 0)  # Starting node (x, y, yaw)
+                x_goal = (25.0, 3.0)  # Goal node
+            elif env_type == 2:
+                x_start = (2.0, 2.0, 0)  # Starting node (x, y, yaw)
+                x_goal = (10.0, 2.0)  # Goal node
+
             if visibility:
                 path_saved = os.getcwd()+f"/output/{directory_name}/state_traj_vis_{i+1:03d}.npy"
             else:
@@ -144,15 +153,19 @@ def plot_test_gatekeeper(csv_path, csv_name="evaluated.csv"):
     # Load the CSV file into a DataFrame
     df = pd.read_csv(csv_path+csv_name, dtype={'Visibility': int, 'Time': float, 'Unexpected_beh': int, 'Early_Violation': int})
 
-    # Preprocess: Exclude trials where path was not generated (unexpected behavior is -1)
+    # -2: time out, -1: QP failed
+    # but in gatekeeper experiment,there is no -2 case (no added obs)
+    # exclude trials where path was not generated (unexpected behavior is -1)
     df_filtered = df[df['Unexpected_beh'] >= 0]
 
-    # Classify the results into 'Fail' or 'Success'
+    # if unexpected_beh > 0, it violates visibility constraints
     df_filtered['Result'] = df_filtered['Unexpected_beh'].apply(lambda x: 'Fail' if x > 0 else 'Success')
 
     # Summarize results based on visibility
     success_summary = df_filtered[df_filtered['Result'] == 'Success'].groupby('Visibility').size()
     violation_summary = df_filtered[df_filtered['Early_Violation'] > 0].groupby('Visibility').size()
+    # Fill missing categories with 0
+    violation_summary = violation_summary.reindex([0, 1], fill_value=0)
 
     # Create a subplot with two subplots
     fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(8, 8))
@@ -204,7 +217,7 @@ def plot_test_cbf_qp(csv_path, csv_name="evaluated.csv"):
     df = pd.read_csv(csv_path+csv_name, dtype={'Visibility': int, 'Time': float, 'Unexpected_beh': int, 'Early_Violation': int})
 
 
-    # Classify the results into 'Fail' or 'Success'
+    # -2: time out, -1: QP failed or collide
     df['Result'] = df['Unexpected_beh'].apply(lambda x: 'Fail' if x == -1 else 'Success')
 
     # Summarize results based on visibility
@@ -236,21 +249,28 @@ def plot_test_cbf_qp(csv_path, csv_name="evaluated.csv"):
     #summary.reset_index()
 
 if __name__ == "__main__":
-    csv_path = evaluate(num_runs=100)
-    plot(csv_path)
+    # csv_path = evaluate(num_runs=100)
+    # plot(csv_path)
     # plot("", "type2.csv")
     # plt.close()
 
-    csv_path = "output/240225-0430"
+    if env_type == 1:
+        csv_path = "output/240312-2128_large_env"
+    elif env_type == 2:
+        csv_path = "output/240225-0430"
+
     robot_type = 'DynamicUnicycle2D'
     #robot_type = 'Unicycle2D'
-    test_type = 'cbf_qp'
-    #test_type = 'gatekeeper'
-    #following_test(csv_path, robot_type, test_type)
+    #test_type = 'cbf_qp'
+    test_type = 'gatekeeper'
+    following_test(csv_path, robot_type, test_type)
+
     if test_type == 'cbf_qp':
-        plot_test_cbf_qp("output/240225-0430/", f"re-evaluated_{robot_type}_{test_type}.csv")
+        plot_test_cbf_qp(csv_path, f"/re-evaluated_{robot_type}_{test_type}.csv")
     elif test_type == 'gatekeeper':
-        plot_test_gatekeeper("output/240225-0430/", f"re-evaluated_{robot_type}_{test_type}.csv") 
+        plot_test_gatekeeper(csv_path, f"/re-evaluated_{robot_type}_{test_type}.csv") 
     
+    #plot_test_cbf_qp("output/240225-0430/", f"re-evaluated_{robot_type}_{test_type}_fov45.csv")
+
     plt.close()
 
