@@ -124,6 +124,7 @@ class Plotting:
             plt.plot([x[0] for x in path], [x[1] for x in path], '-r', linewidth=2)
             plt.pause(0.01)
             plt.savefig("LQR-CBF_result.PNG")
+            plt.savefig("LQR-CBF_result.svg")
         plt.show()
 
     @staticmethod

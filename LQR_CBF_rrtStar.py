@@ -285,10 +285,15 @@ class LQRrrtStar:
 
 if __name__ == '__main__':
     SHOW_ANIMATION = True
-    x_start = (2.0, 2.0, 0)  # Starting node (x, y, yaw)
-    x_goal = (25.0, 3.0)  # Goal node
-    x_start = (2.0, 2.0, 0)  # Starting node (x, y, yaw)
-    x_goal = (10.0, 2.0)  # Goal node
+
+    env_type = env.type
+
+    if env_type == 1:
+        x_start = (2.0, 2.0, 0)  # Starting node (x, y, yaw)
+        x_goal = (25.0, 3.0)  # Goal node
+    elif env_type == 2:
+        x_start = (2.0, 2.0, 0)  # Starting node (x, y, yaw)
+        x_goal = (10.0, 2.0)  # Goal node
 
     lqr_rrt_star = LQRrrtStar(x_start=x_start, x_goal=x_goal,
                               max_sampled_node_dist=1.0,
@@ -297,14 +302,13 @@ if __name__ == '__main__':
                               rewiring_radius=2,  
                               iter_max=2000,
                               solve_QP=False,
-                              visibility=False,
+                              visibility=True,
                               show_animation=SHOW_ANIMATION)
     waypoints = lqr_rrt_star.planning()
 
     x_init = waypoints[0]
-    alpha = 2.0
-    path_follower = UnicyclePathFollower('unicycle2d', x_init, waypoints,  alpha,
+    path_follower = UnicyclePathFollower('DynamicUnicycle2D', x_init, waypoints,
                                          show_animation=SHOW_ANIMATION,
                                          plotting=lqr_rrt_star.plotting,
                                          env=lqr_rrt_star.env)
-    unexpected_beh = path_follower.run(save_animation=False)
+    unexpected_beh = path_follower.run(save_animation=True)

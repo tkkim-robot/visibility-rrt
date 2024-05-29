@@ -69,6 +69,10 @@ class BaseRobot:
         self.frontier = Polygon() # preserve the union of all the FOV triangles
         self.safety_area = Polygon() # preserve the union of all the safety areas
         self.positions = []  # List to store the positions for plotting
+
+        # initialize the frontier with the initial robot location with radius 1 
+        robot_position = Point(self.X[0, 0], self.X[1, 0]).buffer(1)
+        self.frontier = self.frontier.union(robot_position)
     
     def f(self):
         return self.robot.f(self.X)

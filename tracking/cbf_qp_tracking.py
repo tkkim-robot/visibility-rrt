@@ -240,7 +240,7 @@ if __name__ == "__main__":
     if env_type == 1:
         tf = 100
     elif env_type == 2:
-        tf = 15
+        tf = 30
 
     num_steps = int(tf/dt)
 
@@ -251,8 +251,11 @@ if __name__ == "__main__":
 
     elif env_type == 2:
         path_to_continuous_waypoints = os.getcwd()+"/output/240225-0430/state_traj_ori_016.npy" # fails with QP 34 16
-        #path_to_continuous_waypoints = os.getcwd()+"/output/240225-0430/state_traj_vis_041.npy"
+        path_to_continuous_waypoints = os.getcwd()+"/output/240225-0430/state_traj_vis_021.npy"
         #path_to_continuous_waypoints = os.getcwd()+"/output/240225-0430/state_traj_ori_027.npy"
+
+        path_to_continuous_waypoints = os.getcwd()+"/output/env1_visibility.npy"
+
 
     waypoints = np.load(path_to_continuous_waypoints, allow_pickle=True)
     waypoints = np.array(waypoints, dtype=np.float64)
@@ -265,7 +268,7 @@ if __name__ == "__main__":
     env_handler = env.Env()
 
     type = 'Unicycle2D'
-    type = 'DynamicUnicycle2D'
+    #type = 'DynamicUnicycle2D'
     path_follower = UnicyclePathFollower(type, x_init, waypoints, dt, tf, 
                                          show_animation=True,
                                          plotting=plot_handler,
@@ -291,4 +294,4 @@ if __name__ == "__main__":
         unknown_obs = np.array([[9.0, 8.8, 0.3]]) # 45 FOV, type 2 (small)
 
     path_follower.set_unknown_obs(unknown_obs)
-    unexpected_beh = path_follower.run(save_animation=False)
+    unexpected_beh = path_follower.run(save_animation=True)

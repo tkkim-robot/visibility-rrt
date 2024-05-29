@@ -137,7 +137,7 @@ def following_test(csv_path, robot_type, test_type):
             else:
                 path_saved = os.getcwd()+f"/{csv_path}/state_traj_ori_{i+1:03d}.npy"
 
-            unexpected_beh, early_violation = following(path_saved, robot_type, test_type, timeout=5)
+            unexpected_beh, early_violation = following(path_saved, robot_type, test_type, timeout=10)
             if unexpected_beh == -2:
                 print("Time out") # unknown obs are blocking the path, but no collision
             elif unexpected_beh == -1:
@@ -260,9 +260,9 @@ if __name__ == "__main__":
         csv_path = "output/240225-0430"
 
     robot_type = 'DynamicUnicycle2D'
-    #robot_type = 'Unicycle2D'
-    #test_type = 'cbf_qp'
-    test_type = 'gatekeeper'
+    robot_type = 'Unicycle2D'
+    test_type = 'cbf_qp'
+    #test_type = 'gatekeeper'
     following_test(csv_path, robot_type, test_type)
 
     if test_type == 'cbf_qp':
