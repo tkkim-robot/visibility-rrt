@@ -55,6 +55,51 @@ class LQR_CBF_Planner:
         self.visibility_cbf = Visibility_CBF()
 
         self.visibility= visibility
+        self.cx = 0.0 # critical point
+        self.cy = 0.0 
+
+    def compute_critical_point(self, rx, ry, ryaw, gx, gy, gtheta):
+
+        cam_range = self.visibility_cbf.cam_range
+        fov_angle = self.visibility_cbf.fov
+
+        # Compute the relative angle between the goal node and the robot's heading
+        delta_theta = angle_normalize(gtheta - ryaw)
+        # Check if the relative angle lies outside of the current FOV
+        if abs(delta_theta) > fov_angle / 2:
+            # Compute the tube radius
+            tube_radius = cam_range * math.sin(fov_angle / 2)
+
+            # Compute the slope and y-intercept of the line connecting the robot and goal node
+            if gx - rx != 0:
+                slope = (gy - ry) / (gx - rx)
+                y_intercept = ry - slope * rx
+            else:
+                slope = float('inf')
+                y_intercept = float('inf')
+
+            # Compute the slope and y-intercept of the tube boundary lines
+            tube_slope = math.tan(ryaw)
+            if delta_theta > 0:
+                # Goal node is on the right side of the robot's heading angle
+                tube_y_intercept = ry - tube_slope * rx + tube_radius / math.cos(ryaw)
+            else:
+                # Goal node is on the left side of the robot's heading angle
+                tube_y_intercept = ry - tube_slope * rx - tube_radius / math.cos(ryaw)
+
+            cx = (tube_y_intercept - y_intercept) / (slope - tube_slope)
+            cy = slope * cx + y_intercept
+
+        # the critical point is in the FOV, but might or might not be in the current sensing range
+        else:
+            MAX_DIST_CRITICAL = math.cos(math.pi/2 - fov_angle/2) * cam_range # 3 is range of the sensor
+            dist_to_critical = math.hypot(gx-rx, gy-ry)
+            dist_to_critical = min(dist_to_critical, MAX_DIST_CRITICAL)
+            cx = rx + dist_to_critical * math.cos(gtheta)
+            cy = ry + dist_to_critical * math.sin(gtheta)
+
+        return cx, cy
+
     
     def lqr_cbf_planning(self, start_node, goal_node, LQR_gain, solve_QP = False, show_animation = True):
 
@@ -110,17 +155,13 @@ class LQR_CBF_Planner:
         while time <= self.MAX_TIME:
             time += self.DT
 
-            # FIXME: critical point should be more general
-            # FIXME: first, let's try to just give the new_node, and modify the distance a little bit shorter
-            #(for t_reach to be make sense), treat it as xc
             #MAX_DIST_CRITICAL = 5.0 # [m]
             cam_range = self.visibility_cbf.cam_range
 
-            MAX_DIST_CRITICAL = math.cos(math.pi/2 - self.visibility_cbf.fov/2) * cam_range # 3 is range of the sensor
-            dist_to_critical = math.hypot(gx-rx[-1], gy-ry[-1])
-            dist_to_critical = min(dist_to_critical, MAX_DIST_CRITICAL)
-            cx = rx[-1] + dist_to_critical * math.cos(gtheta)
-            cy = ry[-1] + dist_to_critical * math.sin(gtheta)
+            cx, cy = self.compute_critical_point(rx[-1], ry[-1], ryaw[-1], gx, gy, gtheta)
+            self.cx = cx
+            self.cy = cy
+
             self.visibility_cbf.set_critical_point(np.array([cx, cy]))
 
             x = xk - xd
@@ -147,6 +188,7 @@ class LQR_CBF_Planner:
                         lambda event: [exit(0) if event.key == 'escape' else None])
                 plt.plot(sx, sy, "or")
                 plt.plot(gx, gy, "ob")
+                plt.plot(cx, cy, "om")
                 plt.plot(rx, ry, "-r")
 
                 robot_position = (rx[-1], ry[-1])
@@ -344,7 +386,8 @@ if __name__ == '__main__':
         stheta = math.atan2(gy-sy, gx-sx)
 
         # add a small noise to the stheta
-        stheta += random.uniform(-math.pi/1, math.pi/1)
+        #stheta += random.uniform(-math.pi/3, math.pi/3)
+        stheta -= math.radians(75/2) + 0.4 # for testing
 
         start_node = Node([sx, sy, stheta])
         goal_node = Node([gx, gy])
@@ -360,6 +403,8 @@ if __name__ == '__main__':
             f, (ax1, ax2) = plt.subplots(1, 2, sharey=True)
             ax1.plot(sx, sy, "or")
             ax1.plot(gx, gy, "ob")
+            ax1.plot(lqr_cbf_planner.cx, lqr_cbf_planner.cy, "om")
+            print(lqr_cbf_planner.cx, lqr_cbf_planner.cy)
             ax1.plot(rx, ry, "-r")
             ax1.grid()
             
