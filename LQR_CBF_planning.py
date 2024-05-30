@@ -17,6 +17,7 @@ Created on Jan 22, 2024
 
 @description: This code implements a discrete-time finite horizon LQR with unicycle model using velocity control. 
 This code also provides a path planning function with the computed LQR gain, both using QP and not using QP.
+The planning without using QP is the LQR-CBF-Steer algorithm in the paper.
 They are similar to "motion_plannig_with/without_QP()" in cbf.py, but they use LQR gains instead.
 The main function shows tracking a randomly generated goal points with LQR planning. (can turn on/off QP)
 
@@ -25,7 +26,7 @@ The code baseline is from Guang Yang.
 Please see this origina code for detail : https://github.com/mingyucai/LQR_CBF_rrtStar/blob/main/nonlinear_dynamic_model/LQR_nonlinear_planning.py
 Currently. only supports unicycle model with velocity control.
 
-@required-scripts: cbf.py, env.py
+@required-scripts: cbf.py, visibility_cbf.py, env.py
 
 @being-used-in: LQR_CBF_rrtStar.py
 """

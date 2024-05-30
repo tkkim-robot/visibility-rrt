@@ -6,6 +6,17 @@ import os
 import glob
 import subprocess
 
+"""
+Created on Feb 8, 2024
+@author: Taekyung Kim
+
+@description: This code implements a CBF-QP controller that tracks a set of waypoints.
+It provides two dynamics models: Unicycle2D and DynamicUnicycle2D.
+It has useful tools to analyze the union of sensing footprints and the safety of the robot.
+
+@required-scripts: robot.py
+"""
+
 class UnicyclePathFollower:
     def __init__(self, type, X0, waypoints, dt=0.05, tf=100,
                   show_animation=False, plotting=None, env=None):

@@ -1,7 +1,4 @@
-"""
-Plotting tools for Sampling-based algorithms
-@author: huiming zhou
-"""
+
 
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
