@@ -11,12 +11,11 @@ from tracking.cbf_qp_tracking import UnicyclePathFollower
 
 """
 Created on Jan 23, 2024
-# FIXME: write desciprtion
 @author: Taekyung Kim
 
-@description:
+@description: This code implements the visibility-aware RRT* algorithm, which is a variant of the LQR-RRT* algorithm.
+During node expansion, the algorithm uses the LQR-CBF-Steer function to generate a collision-free and visibility-aware path.
 
-@note: 
 
 @required-scripts: LQR_CBF_planning.py, env.py
 
