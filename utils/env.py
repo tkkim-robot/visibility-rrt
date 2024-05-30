@@ -24,11 +24,12 @@ class Env:
     def obs_boundary(width, height):  # circle
         w = width
         h = height
+        linewidth = 0.5
         obs_boundary = [
-            [0, 0, 1, h],
-            [0, h, w, 1],
-            [1, 0, w, 1],
-            [w, 1, 1, h]
+            [0, 0, linewidth, h],
+            [0, h, w, linewidth],
+            [linewidth, 0, w, linewidth],
+            [w, linewidth, linewidth, h]
         ]
         return obs_boundary
 

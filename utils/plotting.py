@@ -72,7 +72,13 @@ class Plotting:
         plt.plot(self.xG[0], self.xG[1], "rs", linewidth=3)
 
         plt.title(name)
-        plt.axis("equal")
+        eps = 1.0
+        plt.xlim(self.env.x_range[0] - eps, self.env.x_range[1] + eps)
+        plt.ylim(self.env.y_range[0] - eps, self.env.y_range[1] + eps)
+        plt.gca().set_aspect('equal', adjustable='box')
+        plt.tight_layout()
+
+        return ax, fig
 
     @staticmethod
     def plot_visited(nodelist, animation):
@@ -118,6 +124,7 @@ class Plotting:
             plt.plot([x[0] for x in path], [x[1] for x in path], '-r', linewidth=2)
             plt.pause(0.01)
             plt.savefig("LQR-CBF_result.PNG")
+            plt.savefig("LQR-CBF_result.svg")
         plt.show()
 
     @staticmethod
