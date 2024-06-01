@@ -27,7 +27,7 @@ The available options are:
 
 SHOW_ANIMATION = False
 
-class LQRrrtStar:
+class VisibilityRRTStar:
     def __init__(self, x_start, x_goal, max_sampled_node_dist=10, max_rewiring_node_dist=10,
                  goal_sample_rate=0.1, rewiring_radius=20, iter_max=1000, solve_QP=False,
                  visibility=True, collision_cbf=True,
@@ -299,7 +299,7 @@ if __name__ == '__main__':
         x_start = (2.0, 2.0, 0)  # Starting node (x, y, yaw)
         x_goal = (10.0, 2.0)  # Goal node
 
-    lqr_rrt_star = LQRrrtStar(x_start=x_start, x_goal=x_goal,
+    lqr_rrt_star = VisibilityRRTStar(x_start=x_start, x_goal=x_goal,
                               max_sampled_node_dist=1.0,
                               max_rewiring_node_dist=2,
                               goal_sample_rate=0.1,

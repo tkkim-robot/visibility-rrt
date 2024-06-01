@@ -259,13 +259,13 @@ if __name__ == "__main__":
         # type 1
         path_to_continuous_waypoints = os.getcwd()+"/output/240312-2128_large_env/state_traj_vis_005.npy"
         path_to_continuous_waypoints = os.getcwd()+"/output/240312-2128_large_env/state_traj_ori_001.npy"
+        path_to_continuous_waypoints = os.getcwd()+"/output/state_traj_astar_large.npy"  # resolution 0.2, radius_pad 0.7
 
     elif env_type == 2:
         path_to_continuous_waypoints = os.getcwd()+"/output/240225-0430/state_traj_ori_016.npy" # fails with QP 34 16
         path_to_continuous_waypoints = os.getcwd()+"/output/240225-0430/state_traj_vis_021.npy"
+        path_to_continuous_waypoints = os.getcwd()+"/output/state_traj_astar_small.npy" # resolution 0.2, radius_pad 0.5
         #path_to_continuous_waypoints = os.getcwd()+"/output/240225-0430/state_traj_ori_027.npy"
-
-        path_to_continuous_waypoints = os.getcwd()+"/output/env1_visibility.npy"
 
 
     waypoints = np.load(path_to_continuous_waypoints, allow_pickle=True)
@@ -278,8 +278,8 @@ if __name__ == "__main__":
     plot_handler = plotting.Plotting(x_init, x_goal)
     env_handler = env.Env()
 
-    type = 'Unicycle2D'
-    #type = 'DynamicUnicycle2D'
+    #type = 'Unicycle2D'
+    type = 'DynamicUnicycle2D'
     path_follower = UnicyclePathFollower(type, x_init, waypoints, dt, tf, 
                                          show_animation=True,
                                          plotting=plot_handler,

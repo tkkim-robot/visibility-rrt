@@ -264,8 +264,8 @@ class LQR_CBF_Planner:
             if not self.collision_cbf_flag:
                 collision = self.collision_cbf.collision_check([xk[0, 0], xk[1, 0], xk[2,0]], model = "unicycle_velocity_control")
                 if collision:
-                    print(xk[0, 0], xk[1, 0])
-                    print("collision")
+                    # print(xk[0, 0], xk[1, 0])
+                    # print("collision")
                     break
                 
 
