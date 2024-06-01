@@ -15,6 +15,10 @@ Created on Jan 23, 2024
 
 @description: This code implements the visibility-aware RRT* algorithm, which is a variant of the LQR-RRT* algorithm.
 During node expansion, the algorithm uses the LQR-CBF-Steer function to generate a collision-free and visibility-aware path.
+The available options are:
+    visibility-aware RRT* (visibility=True, collision_cbf=True)
+    LQR-CBF-RRT* (visibility=False, collision_cbf=True)
+    LQR-RRT* (visibility=False, collision_cbf=False)
 
 
 @required-scripts: LQR_CBF_planning.py, env.py
@@ -25,7 +29,8 @@ SHOW_ANIMATION = False
 
 class LQRrrtStar:
     def __init__(self, x_start, x_goal, max_sampled_node_dist=10, max_rewiring_node_dist=10,
-                 goal_sample_rate=0.1, rewiring_radius=20, iter_max=1000, solve_QP=False, visibility=True,
+                 goal_sample_rate=0.1, rewiring_radius=20, iter_max=1000, solve_QP=False,
+                 visibility=True, collision_cbf=True,
                  show_animation=False, path_saved=None):
         # arguments
         self.x_start = Node(x_start)
@@ -55,7 +60,7 @@ class LQRrrtStar:
         utils_ = utils.Utils() # in this code, only use is_collision()
         self.is_collision = utils_.is_collision
         # self.obs_circle = self.env.obs_circle
-        lqr_cbf_planner = LQR_CBF_Planner(visibility=visibility)
+        lqr_cbf_planner = LQR_CBF_Planner(visibility=visibility, collision_cbf=collision_cbf)
         self.lqr_cbf_planning = lqr_cbf_planner.lqr_cbf_planning
         self.LQR_Gain = dict() # call by reference, so it's modified in LQRPlanner
 
@@ -301,7 +306,8 @@ if __name__ == '__main__':
                               rewiring_radius=2,  
                               iter_max=2000,
                               solve_QP=False,
-                              visibility=True,
+                              visibility=False,
+                              collision_cbf=False,
                               show_animation=SHOW_ANIMATION)
     waypoints = lqr_rrt_star.planning()
 

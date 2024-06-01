@@ -33,7 +33,7 @@ Currently. only supports unicycle model with velocity control.
 
 class LQR_CBF_Planner:
 
-    def __init__(self, visibility=True):
+    def __init__(self, visibility=True, collision_cbf=True):
 
         self.N = 3  # number of state variables
         self.M = 2  # number of control variables
@@ -55,7 +55,8 @@ class LQR_CBF_Planner:
         self.collision_cbf = CBF(self.obs_circle)
         self.visibility_cbf = Visibility_CBF()
 
-        self.visibility= visibility
+        self.visibility_cbf_flag= visibility
+        self.collision_cbf_flag = collision_cbf
         self.cx = 0.0 # critical point
         self.cy = 0.0 
 
@@ -242,20 +243,31 @@ class LQR_CBF_Planner:
                     break
             else:
                 # check if LQR control input is safe with respect to CBF constraint, not solving QP
-                collision_cbf_constraint = self.collision_cbf.QP_constraint([x[0, 0] + gx, x[1, 0] + gy, x[2, 0] + gtheta], u, model = "unicycle_velocity_control")
-                visibility_cbf_constraint = self.visibility_cbf.QP_constraint([x[0, 0] + gx, x[1, 0] + gy, x[2, 0] + gtheta], u, model = "unicycle_velocity_control")
-                if not collision_cbf_constraint:
-                    #print("violated collision cbf constraint")
-                    break
-                if self.visibility and not visibility_cbf_constraint:
+                if self.collision_cbf_flag:
+                    collision_cbf_constraint = self.collision_cbf.QP_constraint([x[0, 0] + gx, x[1, 0] + gy, x[2, 0] + gtheta], u, model = "unicycle_velocity_control")
+                    if not collision_cbf_constraint:
+                        #print("violated collision cbf constraint")
+                        break
+                if self.visibility_cbf_flag:
+                    visibility_cbf_constraint = self.visibility_cbf.QP_constraint([x[0, 0] + gx, x[1, 0] + gy, x[2, 0] + gtheta], u, model = "unicycle_velocity_control")
+                    if not visibility_cbf_constraint:
                     #print("violated visibility cbf constraint")
                     # violate either of constraint
-                    break
+                        break
 
             # update current state
             xk = self.A @ xk + self.B @ u 
             theta_k = angle_normalize(xk[2,0])
             xk[2,0] = theta_k
+
+            # if collisino_cbf_flag is false, then do normal collision check
+            if not self.collision_cbf_flag:
+                collision = self.collision_cbf.collision_check([xk[0, 0], xk[1, 0], xk[2,0]], model = "unicycle_velocity_control")
+                if collision:
+                    print(xk[0, 0], xk[1, 0])
+                    print("collision")
+                    break
+                
 
             rx.append(xk[0, 0])
             ry.append(xk[1, 0])
