@@ -3,6 +3,7 @@ import os
 import time
 import pandas as pd
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 from visibility_rrtStar import VisibilityRRTStar
 from tracking.cbf_qp_tracking import UnicyclePathFollower
@@ -17,7 +18,7 @@ def planning_wrapper(lqr_rrt_star, result_queue):
     waypoints = lqr_rrt_star.planning()
     result_queue.put(waypoints)  # Use a queue to safely return data from the process
 
-@stopit.threading_timeoutable(default=0)
+@stopit.threading_timeoutable(default=[0,0])
 def planning(x_start, x_goal, visibility, collision_cbf, path_saved):
     if env_type == 1:
         iter_max = 3000
@@ -34,17 +35,15 @@ def planning(x_start, x_goal, visibility, collision_cbf, path_saved):
                                     collision_cbf=collision_cbf,
                                     show_animation=False,
                                     path_saved=path_saved)
-    t1 = time.time()
-    waypoints = lqr_rrt_star.planning()
-    t2 = time.time()
-    time_took = t2-t1
+
+    waypoints, compute_node_time, rewire_time = lqr_rrt_star.planning()
 
     del lqr_rrt_star
     gc.collect()
 
     if waypoints is None:
-        return 0
-    return time_took
+        return 0, 0
+    return compute_node_time, rewire_time
 
 
 @stopit.threading_timeoutable(default=[-2, 0])
@@ -93,7 +92,7 @@ def evaluate(num_runs=10, robot_type='Unicycle2D',
     os.makedirs(f'output/{directory_name}')
     # create a csv file
     with open(f'output/{directory_name}/evaluated.csv', 'w') as f:
-        f.write("Algorithm,Time,Unexpected_beh,Early_Violation\n")
+        f.write("Algorithm,Time,Unexpected_beh,Early_Violation,NodeTime,RewireTime\n")
     for algorithm in algorithms:
         if algorithm == 'lqr_rrt_star':
             visibility_cbf = False
@@ -121,17 +120,22 @@ def evaluate(num_runs=10, robot_type='Unicycle2D',
 
             # loop until the path is generated
             while True:
-                time_took = planning(x_start, x_goal, visibility_cbf, collision_cbf, path_saved, timeout=50)
+                compute_node_time, rewire_time = planning(x_start, x_goal, visibility_cbf, collision_cbf, path_saved, timeout=50)
                 # fonud a path
-                if time_took != 0:
+                if compute_node_time != 0:
                     break
 
             if following_flag:
                 unexpected_beh, early_violation = following(path_saved, following_robot_type, following_test_type, timeout=50)
-                print(f"Unexpected_beh: {unexpected_beh}, Early Violation: {early_violation}, Time: {time_took}\n")
+                print(f"Unexpected_beh: {unexpected_beh}, Early Violation: {early_violation}, NodeTime: {compute_node_time}, RewireTime: {rewire_time}\n")
                 # save the results with csv
-                with open(f'output/{directory_name}/evaluated.csv', 'a') as f:
-                    f.write(f"{algorithm},{time_took},{unexpected_beh},{early_violation}\n")
+            else:
+                unexpected_beh = -100 # didn't test it
+                early_violation = -100
+                print(f"NodeTime: {compute_node_time}, RewireTime: {rewire_time}\n")
+            with open(f'output/{directory_name}/evaluated.csv', 'a') as f:
+                f.write(f"{algorithm},{compute_node_time+rewire_time},{unexpected_beh},{early_violation},{compute_node_time},{rewire_time}\n")
+
 
     return f'output/{directory_name}/'
 
@@ -163,12 +167,21 @@ def following_test(csv_path, robot_type, test_type, algorithms=['lqr_rrt_star', 
             with open(f"{csv_path}/re-evaluated_{robot_type}_{test_type}.csv", 'a') as f:
                 f.write(f"{algorithm},{time_val},{unexpected_beh},{early_violation}\n")
 
+def filter_outlier(df, column):
+    Q1 = df[column].quantile(0.25)
+    Q3 = df[column].quantile(0.75)
+    IQR = Q3 - Q1
+    lower_bound = Q1 - 1.5 * IQR
+    upper_bound = Q3 + 1.5 * IQR
+    return df[(df[column] >= lower_bound) & (df[column] <= upper_bound)]
+
+
 def plot_test_gatekeeper(csv_path, csv_name="evaluated.csv"):
     plt.clf()
     plt.close()  # Close the first figure
 
     # Load the CSV file into a DataFrame
-    df = pd.read_csv(csv_path+csv_name, dtype={'Algorithm': str, 'Time': float, 'Unexpected_beh': int, 'Early_Violation': int})
+    df = pd.read_csv(csv_path+csv_name, dtype={'Algorithm': str, 'Time': float, 'Unexpected_beh': int, 'Early_Violation': int, 'NodeTime': float, 'RewireTime': float})
 
     # -2: time out, -1: QP failed
     # but in gatekeeper experiment,there is no -2 case (no added obs)
@@ -186,13 +199,15 @@ def plot_test_gatekeeper(csv_path, csv_name="evaluated.csv"):
     violation_summary = violation_summary.reindex(['lqr_rrt_star', 'lqr_cbf_rrt_star', 'visibility_rrt_star'], fill_value=0)
 
     # Create a subplot with two subplots
-    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(8, 8))
+    fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, figsize=(8, 8))
 
     # Plot the success rate in the first subplot
     success_summary.plot(kind='bar', ax=ax1)
+    ax1.set_xticklabels(ax1.get_xticklabels(), rotation=0, horizontalalignment='right')
     ax1.set_title('Success Rate by Visibility')
     ax1.set_xlabel('Algorithm')
     ax1.set_ylabel('Number of Trials')
+    # rotate x-axis labels
 
     # Add labels on top of each bar
     for i, v in enumerate(success_summary.values):
@@ -200,6 +215,7 @@ def plot_test_gatekeeper(csv_path, csv_name="evaluated.csv"):
 
     # Plot the early violation rate in the second subplot
     violation_summary.plot(kind='bar', ax=ax2)
+    ax2.set_xticklabels(ax2.get_xticklabels(), rotation=0, horizontalalignment='right')
     ax2.set_title('Early Violation Rate by Visibility')
     ax2.set_xlabel('Algorithm')
     ax2.set_ylabel('Number of Trials')
@@ -208,20 +224,45 @@ def plot_test_gatekeeper(csv_path, csv_name="evaluated.csv"):
     for i, v in enumerate(violation_summary.values):
         ax2.text(i, v, str(v), ha='center', va='bottom')
 
-    # Plot the mean, variance, third quantile, and first quantile of time using a violin plot in the second subplot
-    # ax3.violinplot(dataset=[df_filtered[df_filtered['Algorithm'] == False]['Time'], df_filtered[df_filtered['Algorithm'] == True]['Time']],
-    #                positions=[0, 1], showmeans=True)
-    # ax3.set_title('Mean, Variance, Third Quantile, and First Quantile of Time by Visibility')
-    # ax3.set_xlabel('Algorithm')
-    # ax3.set_ylabel('Time')
+    # drop the outlier in NodeTime and RewireTime
+
+    # NodeTime violin plot
+    # remove top 3% of the data in each algorithm group
+    # Filter out the top 3% of data in NodeTime and RewireTime columns for each algorithm
+    df = filter_outlier(df, 'NodeTime')
+    df = filter_outlier(df, 'RewireTime')
+    sns.violinplot(data=df, x='Algorithm', y='NodeTime', ax=ax3)
+    ax3.set_title('NodeTime by Algorithm')
+    ax3.set_xlabel('Algorithm')
+    ax3.set_ylabel('NodeTime (seconds)')
+
+    # Adding mean value text on NodeTime plot
+    node_time_means = df.groupby('Algorithm')['NodeTime'].mean()
+    # rearragne the order of the algorithms 
+    node_time_means = node_time_means.reindex(['lqr_rrt_star', 'lqr_cbf_rrt_star', 'visibility_rrt_star'])
+    for i, algorithm in enumerate(node_time_means.index):
+        mean_val = node_time_means[algorithm]
+        print(algorithm, mean_val)
+        ax3.text(i, mean_val, f'{mean_val:.2f}', ha='center', va='center', fontsize=10, color='white', bbox=dict(facecolor='red', alpha=0.5))
+
+    # RewireTime violin plot
+    sns.violinplot(data=df, x='Algorithm', y='RewireTime', ax=ax4)
+    ax4.set_title('RewireTime by Algorithm')
+    ax4.set_xlabel('Algorithm')
+    ax4.set_ylabel('RewireTime (seconds)')
+
+    # Adding mean value text on RewireTime plot
+    rewire_time_means = df.groupby('Algorithm')['RewireTime'].mean()
+    rewire_time_means = rewire_time_means.reindex(['lqr_rrt_star', 'lqr_cbf_rrt_star', 'visibility_rrt_star'])
+
+    for i, algorithm in enumerate(rewire_time_means.index):
+        mean_val = rewire_time_means[algorithm]
+        print(algorithm, mean_val)
+        ax4.text(i, mean_val, f'{mean_val:.2f}', ha='center', va='center', fontsize=10, color='white', bbox=dict(facecolor='red', alpha=0.5))
 
     plt.tight_layout()
     plt.savefig(csv_path+"evaluate.PNG")
     plt.show()  # Plot the second figure
-
-    # Return DataFrame for further inspection if needed
-    #summary.reset_index()
-
 
 def plot_test_cbf_qp(csv_path, csv_name="evaluated.csv"):
     plt.clf()
@@ -239,7 +280,6 @@ def plot_test_cbf_qp(csv_path, csv_name="evaluated.csv"):
 
     # Fill missing categories with 0
     failure_summary = failure_summary.reindex(['lqr_rrt_star', 'lqr_cbf_rrt_star', 'visibility_rrt_star'], fill_value=0)
-
 
     # Create a subplot with two subplots
     fig, ax = plt.subplots(figsize=(6, 4))
@@ -262,7 +302,7 @@ def plot_test_cbf_qp(csv_path, csv_name="evaluated.csv"):
     #summary.reset_index()
 
 if __name__ == "__main__":
-    #csv_path = evaluate(num_runs=2, robot_type='Unicycle2D', algorithms=['lqr_rrt_star', 'lqr_cbf_rrt_star', 'visibility_rrt_star'], following_flag=False)
+    #csv_path = evaluate(num_runs=100, robot_type='Unicycle2D', algorithms=['lqr_rrt_star', 'lqr_cbf_rrt_star', 'visibility_rrt_star'], following_flag=False)
     #csv_path = evaluate(num_runs=50, robot_type='Unicycle2D', algorithms=['lqr_rrt_star'], following_flag=True)
     
     # following test
@@ -273,11 +313,13 @@ if __name__ == "__main__":
     if env_type == 1:
         csv_path = "output/240312-2128_large_env"
         csv_path = "output/240530-1753_lqr_large_env"
+        csv_path = "output/240601-0327_speed_large_env"
     elif env_type == 2:
         csv_path = "output/240225-0430"
         csv_path = "output/240530-1715_lqr"
+        csv_path = "output/240601-0523_speed"
 
-    following_test(csv_path, robot_type, test_type) # test with dynamic unicycle model
+    #following_test(csv_path, robot_type, test_type) # test with dynamic unicycle model
 
     if test_type == 'cbf_qp':
         #plot_test_cbf_qp(csv_path, f"/re-evaluated_{robot_type}_{test_type}.csv")
@@ -287,24 +329,4 @@ if __name__ == "__main__":
     
     plt.close()
     
-
-    # if env_type == 1:
-    #     csv_path = "output/240312-2128_large_env"
-    # elif env_type == 2:
-    #     csv_path = "output/240225-0430"
-
-    # robot_type = 'DynamicUnicycle2D'
-    # robot_type = 'Unicycle2D'
-    # test_type = 'cbf_qp'
-    # #test_type = 'gatekeeper'
-    # following_test(csv_path, robot_type, test_type)
-
-    # if test_type == 'cbf_qp':
-    #     plot_test_cbf_qp(csv_path, f"/re-evaluated_{robot_type}_{test_type}.csv")
-    # elif test_type == 'gatekeeper':
-    #     plot_test_gatekeeper(csv_path, f"/re-evaluated_{robot_type}_{test_type}.csv") 
-    
-    # #plot_test_cbf_qp("output/240225-0430/", f"re-evaluated_{robot_type}_{test_type}_fov45.csv")
-
-    # plt.close()
 

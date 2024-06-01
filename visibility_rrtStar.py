@@ -71,10 +71,17 @@ class VisibilityRRTStar:
     
         start_time = time.time()
 
+        compute_node_time = 0
+        rewire_time = 0
+
         for k in range(self.iter_max):
+            compute_node_start_time = time.time()
+
             node_rand = self.generate_random_node(self.goal_sample_rate)
             node_nearest = self.nearest_neighbor(self.vertex, node_rand)
             node_new = self.LQR_steer(node_nearest, node_rand)
+
+            compute_node_end_time = time.time()
 
             if self.show_animation:
                 # visualization
@@ -87,6 +94,8 @@ class VisibilityRRTStar:
                     print('rrtStar sampling iterations: ', k)
                     self.plotting.animation_online(self.vertex, "rrtStar", True)
 
+            rewire_start_time = time.time()
+
             # when node_new is feasible and safe
             if node_new and not self.is_collision(node_nearest, node_new):
                 # the order of this function should not be changed, otherwise, neighbor might include itself
@@ -98,12 +107,16 @@ class VisibilityRRTStar:
                 if neighbor_index:
                     self.LQR_choose_parent(node_new, neighbor_index)
                     self.rewire(node_new, neighbor_index)
+            rewire_end_time = time.time()
+        
+            compute_node_time += compute_node_end_time - compute_node_start_time
+            rewire_time += rewire_end_time - rewire_start_time
 
         index = self.search_goal_parent()
 
         if index is None:
             print('No path found!')
-            return None
+            return None, compute_node_time, rewire_time
 
         # extract path to the end_node
         self.path = self.extract_path(node_end=self.vertex[index])
@@ -116,7 +129,11 @@ class VisibilityRRTStar:
 
         print("====  Path planning finished  =====")
         print("===================================\n")
-        return self.path
+
+        print("Compute node time: ", compute_node_time)
+        print("Rewire time: ", rewire_time)
+
+        return self.path, compute_node_time, rewire_time
 
     def generate_random_node(self, goal_sample_rate=0.1):
         delta = self.sample_delta
@@ -309,7 +326,7 @@ if __name__ == '__main__':
                               visibility=False,
                               collision_cbf=False,
                               show_animation=SHOW_ANIMATION)
-    waypoints = lqr_rrt_star.planning()
+    waypoints, _ , _ = lqr_rrt_star.planning()
 
     x_init = waypoints[0]
     path_follower = UnicyclePathFollower('DynamicUnicycle2D', x_init, waypoints,
