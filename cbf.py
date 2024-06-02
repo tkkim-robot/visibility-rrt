@@ -17,6 +17,7 @@ The main function shows some examples.
 @note: This code is a rewritten version of the CBF-RRT paper with
 non-linear dynamics. The code baseline is from Guang Yang.
 Currently. only supports unicycle model with velocity control.
+The obstacle radius r includes the inflated radius, which is the radius of the robot + maximum tracking error of the local tracking controller.
 
 @being-used-in: LQR_CBF_planning.py
 """
@@ -156,6 +157,38 @@ class CBF:
                     if minCBF < 0:
                         return False
         return True
+    
+    def collision_check(self, x_current, model="unicycle_velocity_control"):    
+        """
+            Do normal collision check for RRT*
+        return:
+            True: collision
+            False: no collision
+        """   
+        if model == "unicycle_velocity_control":
+            x = x_current[0]
+            y = x_current[1]
+            #theta = x_current[2]
+
+            # States: x, y, theta
+            obstacle_index = self.find_obstacles_within_cbf_sensing_range(x_current, self.x_obstacle)
+            
+            if obstacle_index:
+                minCBF = float('inf')
+
+                for index in obstacle_index:
+                    xo = self.x_obstacle[index][0]
+                    yo = self.x_obstacle[index][1]
+                    r = self.x_obstacle[index][2]
+
+                    # Unicycle with velocity control
+                    h = (x-xo)**2+(y-yo)**2-r**2
+                    if h < minCBF:
+                        minCBF = h
+
+                    if minCBF < 0:
+                        return True
+        return False
 
 
     def motion_planning_without_QP(self, u_ref, model="unicycle_velocity_control"):

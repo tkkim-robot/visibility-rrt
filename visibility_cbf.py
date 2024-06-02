@@ -10,7 +10,7 @@ from utils.utils import angular_diff, angle_normalize
 Created on Jan 23, 2024
 @author: Taekyung Kim
 
-@description: This code implements a visibility-aware CBF with an unicycle model using velocity control.
+@description: This code implements a visibility CBF with an unicycle model using velocity control.
 This code also provides a path generation function with the CBF constraint.
 The main function shows some examples.
 

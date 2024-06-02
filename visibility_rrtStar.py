@@ -11,12 +11,15 @@ from tracking.cbf_qp_tracking import UnicyclePathFollower
 
 """
 Created on Jan 23, 2024
-# FIXME: write desciprtion
 @author: Taekyung Kim
 
-@description:
+@description: This code implements the visibility-aware RRT* algorithm, which is a variant of the LQR-RRT* algorithm.
+During node expansion, the algorithm uses the LQR-CBF-Steer function to generate a collision-free and visibility-aware path.
+The available options are:
+    visibility-aware RRT* (visibility=True, collision_cbf=True)
+    LQR-CBF-RRT* (visibility=False, collision_cbf=True)
+    LQR-RRT* (visibility=False, collision_cbf=False)
 
-@note: 
 
 @required-scripts: LQR_CBF_planning.py, env.py
 
@@ -24,9 +27,10 @@ Created on Jan 23, 2024
 
 SHOW_ANIMATION = False
 
-class LQRrrtStar:
+class VisibilityRRTStar:
     def __init__(self, x_start, x_goal, max_sampled_node_dist=10, max_rewiring_node_dist=10,
-                 goal_sample_rate=0.1, rewiring_radius=20, iter_max=1000, solve_QP=False, visibility=True,
+                 goal_sample_rate=0.1, rewiring_radius=20, iter_max=1000, solve_QP=False,
+                 visibility=True, collision_cbf=True,
                  show_animation=False, path_saved=None):
         # arguments
         self.x_start = Node(x_start)
@@ -56,7 +60,7 @@ class LQRrrtStar:
         utils_ = utils.Utils() # in this code, only use is_collision()
         self.is_collision = utils_.is_collision
         # self.obs_circle = self.env.obs_circle
-        lqr_cbf_planner = LQR_CBF_Planner(visibility=visibility)
+        lqr_cbf_planner = LQR_CBF_Planner(visibility=visibility, collision_cbf=collision_cbf)
         self.lqr_cbf_planning = lqr_cbf_planner.lqr_cbf_planning
         self.LQR_Gain = dict() # call by reference, so it's modified in LQRPlanner
 
@@ -67,10 +71,17 @@ class LQRrrtStar:
     
         start_time = time.time()
 
+        compute_node_time = 0
+        rewire_time = 0
+
         for k in range(self.iter_max):
+            compute_node_start_time = time.time()
+
             node_rand = self.generate_random_node(self.goal_sample_rate)
             node_nearest = self.nearest_neighbor(self.vertex, node_rand)
             node_new = self.LQR_steer(node_nearest, node_rand)
+
+            compute_node_end_time = time.time()
 
             if self.show_animation:
                 # visualization
@@ -83,6 +94,8 @@ class LQRrrtStar:
                     print('rrtStar sampling iterations: ', k)
                     self.plotting.animation_online(self.vertex, "rrtStar", True)
 
+            rewire_start_time = time.time()
+
             # when node_new is feasible and safe
             if node_new and not self.is_collision(node_nearest, node_new):
                 # the order of this function should not be changed, otherwise, neighbor might include itself
@@ -94,12 +107,16 @@ class LQRrrtStar:
                 if neighbor_index:
                     self.LQR_choose_parent(node_new, neighbor_index)
                     self.rewire(node_new, neighbor_index)
+            rewire_end_time = time.time()
+        
+            compute_node_time += compute_node_end_time - compute_node_start_time
+            rewire_time += rewire_end_time - rewire_start_time
 
         index = self.search_goal_parent()
 
         if index is None:
             print('No path found!')
-            return None
+            return None, compute_node_time, rewire_time
 
         # extract path to the end_node
         self.path = self.extract_path(node_end=self.vertex[index])
@@ -112,7 +129,11 @@ class LQRrrtStar:
 
         print("====  Path planning finished  =====")
         print("===================================\n")
-        return self.path
+
+        print("Compute node time: ", compute_node_time)
+        print("Rewire time: ", rewire_time)
+
+        return self.path, compute_node_time, rewire_time
 
     def generate_random_node(self, goal_sample_rate=0.1):
         delta = self.sample_delta
@@ -295,16 +316,17 @@ if __name__ == '__main__':
         x_start = (2.0, 2.0, 0)  # Starting node (x, y, yaw)
         x_goal = (10.0, 2.0)  # Goal node
 
-    lqr_rrt_star = LQRrrtStar(x_start=x_start, x_goal=x_goal,
+    lqr_rrt_star = VisibilityRRTStar(x_start=x_start, x_goal=x_goal,
                               max_sampled_node_dist=1.0,
                               max_rewiring_node_dist=2,
                               goal_sample_rate=0.1,
                               rewiring_radius=2,  
                               iter_max=2000,
                               solve_QP=False,
-                              visibility=True,
+                              visibility=False,
+                              collision_cbf=False,
                               show_animation=SHOW_ANIMATION)
-    waypoints = lqr_rrt_star.planning()
+    waypoints, _ , _ = lqr_rrt_star.planning()
 
     x_init = waypoints[0]
     path_follower = UnicyclePathFollower('DynamicUnicycle2D', x_init, waypoints,
