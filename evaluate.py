@@ -312,12 +312,8 @@ if __name__ == "__main__":
 
     if env_type == 1:
         csv_path = "output/240312-2128_large_env"
-        csv_path = "output/240530-1753_lqr_large_env"
-        csv_path = "output/240601-0327_speed_large_env"
     elif env_type == 2:
         csv_path = "output/240225-0430"
-        csv_path = "output/240530-1715_lqr"
-        csv_path = "output/240601-0523_speed"
 
     #following_test(csv_path, robot_type, test_type) # test with dynamic unicycle model
 

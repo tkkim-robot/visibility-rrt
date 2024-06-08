@@ -384,7 +384,7 @@ if __name__ == '__main__':
 
     lqr_cbf_planner = LQR_CBF_Planner(visibility=True)
 
-    # initialize a has table for storing LQR gain
+    # initialize a hash table for storing LQR gain
     # TODO: this should be modified to be optional 
     LQR_gain = dict()
 

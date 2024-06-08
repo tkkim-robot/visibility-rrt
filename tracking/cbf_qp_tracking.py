@@ -256,16 +256,10 @@ if __name__ == "__main__":
     num_steps = int(tf/dt)
 
     if env_type == 1:
-        # type 1
-        path_to_continuous_waypoints = os.getcwd()+"/output/240312-2128_large_env/state_traj_vis_005.npy"
-        path_to_continuous_waypoints = os.getcwd()+"/output/240312-2128_large_env/state_traj_ori_001.npy"
-        path_to_continuous_waypoints = os.getcwd()+"/output/state_traj_astar_large.npy"  # resolution 0.2, radius_pad 0.7
+        path_to_continuous_waypoints = os.getcwd()+"/output/240312-2128_large_env/state_traj.npy"
 
     elif env_type == 2:
-        path_to_continuous_waypoints = os.getcwd()+"/output/240225-0430/state_traj_ori_016.npy" # fails with QP 34 16
-        path_to_continuous_waypoints = os.getcwd()+"/output/240225-0430/state_traj_vis_021.npy"
-        path_to_continuous_waypoints = os.getcwd()+"/output/state_traj_astar_small.npy" # resolution 0.2, radius_pad 0.5
-        #path_to_continuous_waypoints = os.getcwd()+"/output/240225-0430/state_traj_ori_027.npy"
+        path_to_continuous_waypoints = os.getcwd()+"/output/240225-0430/state_traj.npy"
 
 
     waypoints = np.load(path_to_continuous_waypoints, allow_pickle=True)
@@ -300,9 +294,9 @@ if __name__ == "__main__":
                                 [12.0, 13.0, 0.5],
                                 [15.0, 20.0, 0.5],
                                 [20.5, 20.5, 0.5],
-                                [24.0, 15.0, 0.5]]) # 45 FOV, type 1 (small)
+                                [24.0, 15.0, 0.5]])
     elif env_type == 2: 
-        unknown_obs = np.array([[9.0, 8.8, 0.3]]) # 45 FOV, type 2 (small)
+        unknown_obs = np.array([[9.0, 8.8, 0.3]]) 
 
     path_follower.set_unknown_obs(unknown_obs)
     unexpected_beh = path_follower.run(save_animation=True)
