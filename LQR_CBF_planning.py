@@ -399,8 +399,8 @@ if __name__ == '__main__':
         stheta = math.atan2(gy-sy, gx-sx)
 
         # add a small noise to the stheta
-        #stheta += random.uniform(-math.pi/3, math.pi/3)
-        stheta -= math.radians(75/2) + 0.4 # for testing
+        stheta += random.uniform(-math.pi/2, math.pi/2)
+        #stheta -= math.radians(75/2) + 0.4 # for testing
 
         start_node = Node([sx, sy, stheta])
         goal_node = Node([gx, gy])
