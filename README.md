@@ -141,7 +141,8 @@ If you find this repository useful, please consider citing our paper:
 @inproceedings{kim2024visibility-aware, 
     author    = {Taekyung Kim and Dimitra Panagou},
     title     = {{Visibility-Aware RRT* for Safety-Critical Navigation of Perception-Limited Robots in Unknown Environments}}, 
-    booktitle = {{arXiv} preprint {arXiv}:2406.07728}, shorttitle = {{Visibility}-{RRT}*},
+    booktitle = {{arXiv} preprint {arXiv}:2406.07728},
+    shorttitle = {{Visibility}-{RRT}*},
     year      = {2024},
     month     = {June}
 }
