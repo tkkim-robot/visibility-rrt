@@ -39,7 +39,7 @@ The sample results of the generated global paths:
 
 |                                                     Visibility-Aware RRT* (w/ visibility CBF)                                                    |                                                                        LQR-CBF-RRT* (w/o visibility CBF)                |
 | :------------------------------------------------------------------------------------------------------------------------: | :----------------------------------------------------------------------------------------------------------------------------: |
-|  <img src="https://github.com/tkkim-robot/visibility-rrt/assets/40379815/6e6976d1-09b2-4189-b186-e4b59ece3efb" width="200px" height="200px"> | <img src="https://github.com/tkkim-robot/visibility-rrt/assets/40379815/2831ad29-88d9-4b36-a7e3-87566a06bad3" width="200px" height="200px"> |
+|  <img src="https://github.com/tkkim-robot/visibility-rrt/assets/40379815/6e6976d1-09b2-4189-b186-e4b59ece3efb"  height="200px"> | <img src="https://github.com/tkkim-robot/visibility-rrt/assets/40379815/2831ad29-88d9-4b36-a7e3-87566a06bad3"  height="200px"> |
 
 
 ## Path Tracking (CBF-QP)
@@ -75,7 +75,7 @@ The sample results of the CBF-QP tracking (FOV: 45°):
 
 |                                                     Tracking a Path of the Visibility-Aware RRT*                                                    |                                                                       Tracking a Path of the LQR-CBF-RRT*                 |
 | :------------------------------------------------------------------------------------------------------------------------: | :----------------------------------------------------------------------------------------------------------------------------: |
-|  <img src="https://github.com/tkkim-robot/visibility-rrt/assets/40379815/6c3fc15f-1796-49b8-8892-79b1aae2598a" width="200px" height="200px"> | <img src="https://github.com/tkkim-robot/visibility-rrt/assets/40379815/0ed47755-5ce4-4233-9a22-b3cba408016e" width="200px" height="200px"> |
+|  <img src="https://github.com/tkkim-robot/visibility-rrt/assets/40379815/6c3fc15f-1796-49b8-8892-79b1aae2598a"  height="200px"> | <img src="https://github.com/tkkim-robot/visibility-rrt/assets/40379815/0ed47755-5ce4-4233-9a22-b3cba408016e"  height="200px"> |
 
 
 While the CBF-QP tracking a path from the baseline algorithm (which is agnostic to the sensing capability), the robot detects the hidden obstacle too late, leaving no feasible solution for the CBF-QP to avoid the obstacle.
@@ -83,8 +83,9 @@ While the CBF-QP tracking a path from the baseline algorithm (which is agnostic 
 ## Path Tracking (GateKeeper)
 You can also simulate a GateKeeper controller. The red shaded area in front of the robot depicts the minimum breaking distance at the current speed. If this area lies outside of the sensed collision-free space, the next waypoint to follow (the nominal trajectory) is deemed unsafe. 
 
-
-<img width="350" alt="env2_gatekeeper_baseline" src="https://github.com/tkkim-robot/visibility-rrt/assets/40379815/f98224f7-42b7-4798-8360-4e15bd345454">
+<p align="center">
+    <img width="300" alt="env2_gatekeeper_baseline" src="https://github.com/tkkim-robot/visibility-rrt/assets/40379815/f98224f7-42b7-4798-8360-4e15bd345454">
+</p>
 
 In the code, the same `path_follower` instance returns the number of such violations:
 ```python
@@ -96,7 +97,7 @@ The sample results of the GateKeeper tracking (FOV: 70°):
 
 |                                                     Tracking a Path of the Visibility-Aware RRT*                                                    |                                                                       Tracking a Path of the LQR-CBF-RRT*                 |
 | :------------------------------------------------------------------------------------------------------------------------: | :----------------------------------------------------------------------------------------------------------------------------: |
-|  <img src="https://github.com/tkkim-robot/visibility-rrt/assets/40379815/57007625-e8f8-4b13-b2c5-2d42a1f59f9e" width="200px" height="200px"> | <img src="https://github.com/tkkim-robot/visibility-rrt/assets/40379815/f98c6be0-1e18-461c-bba4-cb1b1e18b328" width="200px" height="200px"> |
+|  <img src="https://github.com/tkkim-robot/visibility-rrt/assets/40379815/57007625-e8f8-4b13-b2c5-2d42a1f59f9e"  height="200px"> | <img src="https://github.com/tkkim-robot/visibility-rrt/assets/40379815/f98c6be0-1e18-461c-bba4-cb1b1e18b328"  height="200px"> |
 
 
 ## LQR-CBF-Steer
@@ -106,8 +107,16 @@ You can also visualize how the LQR-CBF-Steer function works in the algorithm. An
 python LQR_CBF_planning.py
 ```
 
-<img width="350" alt="lqr_cbf_steer" src="https://github.com/tkkim-robot/visibility-rrt/assets/40379815/0fdc0a5b-d465-46ee-90c4-f5b1b6f67175">
+<p align="center">
+    <img width="350" alt="lqr_cbf_steer" src="https://github.com/tkkim-robot/visibility-rrt/assets/40379815/0fdc0a5b-d465-46ee-90c4-f5b1b6f67175">
+</p>
 
+## Efficiency Comparison
+The figure illustrates the average number of vertices maintained in the tree at iterations 1000, 2000, and 3000 over 100 runs. The results show that the Visibility-Aware RRT* consistently maintains fewer vertices compared to the two baseline algorithms, demonstrating its efficiency. By maintaining fewer nodes, it can reduce the computational complexity of the `choose_parent` and `rewire` functions. The additional vertices in the compared baselines arise from their lack of consideration for input constraints and visibility constraint, respectively.
+
+<p align="center">
+    <img width="350" alt="vertices" src="https://github.com/tkkim-robot/visibility-rrt/assets/40379815/38ab90d5-f967-49d7-9d4a-0502895f273a">
+</p>
 
 # Parameters Description
 These are the important parameters to tune:
