@@ -178,7 +178,7 @@ class UnicyclePathFollower:
                     current_position = self.robot.X[:2].flatten()
                     self.ax.text(current_position[0]+0.5, current_position[1]+0.5, '!', color='red', weight='bold', fontsize=22)
                     self.fig.canvas.draw()
-                    self.fig.canvas.flush_events()
+                    # self.fig.canvas.flush_events() # in newer matplotlib (>3.8.0), this line freezes the animation
                     plt.pause(5)
 
                 if save_animation:
@@ -206,7 +206,7 @@ class UnicyclePathFollower:
 
             if self.show_animation:
                 self.fig.canvas.draw()
-                self.fig.canvas.flush_events()
+                #self.fig.canvas.flush_events()  # in newer matplotlib (>3.8.0), this line freezes the animation
                 plt.pause(0.01)
 
                 if save_animation and i%2==0:

@@ -4,9 +4,9 @@ This repository contains the implementation of the Visibility-Aware RRT* algorit
 
 # Installation
 
-This repositry only requires common libraries such as `numpy` and `matplotlib`. 
+This repositry only requires common libraries: `numpy`, `matplotlib`, and `scipy`. 
 
-The only additional requirement is `shapely`, which can be installed via `pip`.
+For running CBF-QP, it requires `cvxpy`, `gurobipy`, and `shapely`.
 
 # How to Run Example
 
