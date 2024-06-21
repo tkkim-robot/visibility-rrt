@@ -336,5 +336,5 @@ if __name__ == "__main__":
         robot.render_plot()
 
         fig.canvas.draw()
-        fig.canvas.flush_events()
+        # fig.canvas.flush_events() # in newer matplotlib (>3.8.0), this line freezes the animation
         plt.pause(0.01)
